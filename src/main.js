@@ -69,7 +69,10 @@ let main = async startEndpoint => {
 	let mangaResponse = await get(mangaEndpoint(mangaId));
 	let chapters = mangaResponse.data.chapters
 		.filter(chapter => chapter.language === language)
-		// .filter(chapter => Number(chapter.volume) < 6) // TODO REMOVE
+		.filter(chapter => {
+			console.log('TEST ', chapter.volume, Number(chapter.volume) <= 2)
+			return Number(chapter.volume) <= 2
+		}) // TODO REMOVE
 		.map((chapter, i) => {
 			// let status = new XPromise();
 			let images = getChapterImages(chapter.id);
@@ -87,7 +90,7 @@ let main = async startEndpoint => {
 				id: chapter.id,
 				title: `${chapter.volume} ${chapter.chapter} (${i})`,
 				images,
-				status,
+				// status,
 			};
 		});
 	chapterResponseProgress.addTotal(chapters.length);
@@ -104,7 +107,8 @@ let main = async startEndpoint => {
 	});
 }
 
-main('https://mangadex.org/chapter/95001/1');
+main('https://mangadex.org/chapter/144329/1');
+// main('https://mangadex.org/chapter/95001/1');
 
 // progress bar
 // viewer

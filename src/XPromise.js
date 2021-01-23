@@ -8,7 +8,7 @@
 // 	}
 // }
 
-module.exports = XPromise;
+// module.exports = XPromise;
 
 class XPromise {
 	constructor() {
