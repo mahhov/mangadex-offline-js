@@ -1,4 +1,4 @@
-let percent = decimal => `${Math.round(decimal * 100)}%`;
+let percent = decimal => `${Math.round(decimal * 10000) / 100}%`;
 
 class Progress {
 	constructor(onChange = undefined) {

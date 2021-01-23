@@ -1,29 +1,24 @@
-// class XPromise {
-// 	constructor(resolve, reject) {
-// 		let promise = new Promise(resolve, reject);
-// 		promise.then(() => promise.success = true);
-// 		promise.catch(() => promise.error = true);
-// 		promise.finally(() => promise.done = true);
-// 		return promise;
-// 	}
-// }
-
-// module.exports = XPromise;
-
 class XPromise {
-	constructor() {
+	constructor(promise = undefined) {
 		let resolve, reject;
-		let promise = new Promise((res, rej) => {
+		let xPromise = new Promise((res, rej) => {
 			resolve = res;
 			reject = rej;
 		});
-		promise.resolve = resolve;
-		promise.reject = reject;
-		promise.then(() => promise.success = true);
-		promise.catch(() => promise.error = true);
-		promise.done = false;
-		promise.finally(() => promise.done = true);
-		return promise;
+		xPromise.resolve = resolve;
+		xPromise.reject = reject;
+
+		xPromise.success = false;
+		xPromise.error = false;
+		xPromise.done = false;
+		xPromise.then(() => xPromise.success = true);
+		xPromise.catch(() => xPromise.error = true);
+		xPromise.finally(() => xPromise.done = true);
+
+		promise?.then(resolve);
+		promise?.catch(reject);
+
+		return xPromise;
 	}
 }
 
