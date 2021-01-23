@@ -4,6 +4,7 @@ const dataDir = require('env-paths')('mangadex-offline').data;
 const axios = require('axios');
 const RateLimitedRetryQueue = require('./RateLimitedRetryQueue');
 const Progress = require('./Progress');
+const XPromise = require('./XPromise');
 
 let getQueue1 = new RateLimitedRetryQueue(100, undefined, 10);
 let getQueue2 = new RateLimitedRetryQueue(100, undefined, 10);
@@ -29,13 +30,32 @@ let getChapterImages = async chapterId => {
 	let {server, hash, pages} = response.data;
 	return pages.map(page =>
 		[page, get(imageEndpoint(server, hash, page), {responseType: 'arraybuffer'}, getQueue2)]);
-}
+};
+
+//
+// class MangaProgress {
+// 	constructor() {
+// 		// chapters received response for
+// 		this.chapterResponseProgress = new Progress(p => console.log(`chapter response ${p.percentSuccess}`));
+// 		// chapters received response for all contained images
+// 		this.chapterImageProgress = new Progress(p => console.log(`chapter image ${p.percentSuccess}`));
+// 		// images received response for
+// 		this.imageProgress = new Progress(p => console.log(`image ${p.percentSuccess}`));
+// 		this.imageProgressPerChapter = [];
+// 		// images written
+// 		this.imageWriteProgress = new Progress(p => console.log(`image write ${p.percentSuccess}`));
+// 		this.imageWriteProgressPerChapter = [];
+// 	}
+//
+//
+//
+// }
 
 let main = async startEndpoint => {
-	// TODO move down where used
-	let chapterResponseProgress = new Progress();
-	let chapterImageProgress = new Progress();
-	let imageProgress = new Progress();
+	let chapterResponseProgress = new Progress(p => console.log(`chapter response ${p.percentSuccess}`));
+	let chapterImageProgress = new Progress(p => console.log(`chapter image ${p.percentSuccess}`));
+	let imageProgress = new Progress(p => console.log(`image ${p.percentSuccess}`));
+	let imageWriteProgress = new Progress(p => console.log(`image write ${p.percentSuccess}`));
 
 	let start = 'https://mangadex.org/chapter/144329/1';
 	let chapterId = startEndpoint.match(/chapter\/(\d+)/i)[1];
@@ -49,12 +69,14 @@ let main = async startEndpoint => {
 	let mangaResponse = await get(mangaEndpoint(mangaId));
 	let chapters = mangaResponse.data.chapters
 		.filter(chapter => chapter.language === language)
-		.filter((_, i) => i < 2) // TODO REMOVE
+		// .filter(chapter => Number(chapter.volume) < 6) // TODO REMOVE
 		.map((chapter, i) => {
+			// let status = new XPromise();
 			let images = getChapterImages(chapter.id);
 			images.then(images => {
 				chapterResponseProgress.addSuccess();
 				imageProgress.addTotal(images.length);
+				imageWriteProgress.addTotal(images.length);
 				Promise.all(images.map(async ([_, image]) => {
 					await image;
 					imageProgress.addSuccess();
@@ -65,6 +87,7 @@ let main = async startEndpoint => {
 				id: chapter.id,
 				title: `${chapter.volume} ${chapter.chapter} (${i})`,
 				images,
+				status,
 			};
 		});
 	chapterResponseProgress.addTotal(chapters.length);
@@ -75,13 +98,15 @@ let main = async startEndpoint => {
 		await fs.mkdir(chapterDir, {recursive: true});
 		(await chapter.images).forEach(async ([imageName, image]) => {
 			await fs.writeFile(path.resolve(chapterDir, imageName), await image);
+			imageWriteProgress.addSuccess();
 			console.log('wrote', path.resolve(chapterDir, imageName))
 		});
 	});
 }
 
-main('https://mangadex.org/chapter/144329/1');
+main('https://mangadex.org/chapter/95001/1');
 
 // progress bar
 // viewer
 // only bother for 1 chapter version per chapter (i.e. ignore multiple translations)
+// skip already downloaded
