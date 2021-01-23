@@ -1,0 +1,31 @@
+<style>
+	:host {
+		display: flex;
+		justify-content: space-between;
+		position: relative;
+		align-items: center;
+		cursor: pointer;
+		background-color: var(--dark-blue); ;
+	}
+
+	#pre-value,
+	#post-value {
+		z-index: 1;
+		margin-left: 10px;
+		margin-right: 10px;
+	}
+
+	#post-value {
+		float: right;
+	}
+
+	#fill {
+		position: absolute;
+		height: 100%;
+		background-color: var(--light-blue);
+	}
+</style>
+
+<span id="pre-value"></span>
+<span id="post-value"></span>
+<span id="fill"></span>
