@@ -2,12 +2,12 @@ const fs = require('fs').promises;
 const path = require('path');
 const dataDir = require('env-paths')('mangadex-offline').data;
 const axios = require('axios');
-const RateLimitedRetryQueue = require('./RateLimitedRetryQueue');
-const XPromise = require('./XPromise');
+const RateLimitedRetryQueue = require('./utils/RateLimitedRetryQueue');
+const XPromise = require('./utils/XPromise');
 
-let getQueue1 = new RateLimitedRetryQueue(100, undefined, 10);
-let getQueue2 = new RateLimitedRetryQueue(100, undefined, 10);
-let get = (endpoint, options = undefined, queue = getQueue1) =>
+let getQueueChapters = new RateLimitedRetryQueue(100, undefined, 10);
+let getQueueImages = new RateLimitedRetryQueue(100, undefined, 10);
+let get = (endpoint, options = undefined, queue = getQueueChapters) =>
 	queue.add(async () => {
 		try {
 			console.log('Got', endpoint);
@@ -28,9 +28,9 @@ class Manga {
 		this.language = language;
 
 		this.dataPromise = new XPromise(get(this.endpoint));
-		this.mangaTitlePromise = this.dataPromise.then(dataObj =>
+		this.mangaTitlePromise = this.dataPromise.xThen(dataObj =>
 			dataObj.data.chapters[0]?.mangaTitle);
-		this.chaptersPromise = this.dataPromise.then(dataObj =>
+		this.chaptersPromise = this.dataPromise.xThen(dataObj =>
 			dataObj.data.chapters
 				.filter(chapter => chapter.language === this.language)
 				.reverse()
@@ -55,6 +55,15 @@ class Manga {
 	get endpoint() {
 		return `https://mangadex.org/api/v2/manga/${this.id}/chapters`
 	}
+
+	get asJson() {
+		return {
+			id: this.id,
+			language:this.language,
+			mangaTitle:this.mangaTitlePromise.resolvedObj,
+			chapters: this.chaptersPromise.resolvedObj?.map(chapter => chapter.asJson),
+		};
+	}
 }
 
 class Chapter {
@@ -62,9 +71,9 @@ class Chapter {
 		this.id = id;
 
 		this.dataPromise = new XPromise(get(this.endpoint));
-		this.chapterTitlePromise = this.dataPromise.then(dataObj =>
+		this.chapterTitlePromise = this.dataPromise.xThen(dataObj =>
 			`${dataObj.data.volume} ${dataObj.data.chapter}`);
-		this.pagesPromise = this.dataPromise.then(dataObj => {
+		this.pagesPromise = this.dataPromise.xThen(dataObj => {
 			let {server, hash, pages} = dataObj.data;
 			return pages.map(page => new Page(server, hash, page));
 		});
@@ -85,6 +94,14 @@ class Chapter {
 	static endpoint(id) {
 		return `https://mangadex.org/api/v2/chapter/${id}`;
 	}
+
+	get asJson() {
+		return {
+			id: this.id,
+			chapterTitle: this.chapterTitlePromise.resolvedObj,
+			pages: this.pagesPromise.resolvedObj?.map(page => page.asJson),
+		};
+	}
 }
 
 class Page {
@@ -96,7 +113,7 @@ class Page {
 		this.dataPromise = new XPromise(get(
 			this.endpoint,
 			{responseType: 'arraybuffer'},
-			getQueue2));
+			getQueueImages));
 		this.writePromise = new XPromise();
 	}
 
@@ -108,8 +125,15 @@ class Page {
 	get endpoint() {
 		return `${this.server}${this.hash}/${this.page}`;
 	}
+
+	get asJson() {
+		return {
+			page: this.page,
+		};
+	}
 }
 
+module.exports = Manga;
 
 let main = async sampleChapterEndpoint => {
 	let manga = await Manga.fromSampleChapterEndpoint(sampleChapterEndpoint)
