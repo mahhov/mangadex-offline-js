@@ -5,7 +5,9 @@ const Manga = require('../../services/Manga');
 
 customElements.define(name, class extends XElement {
 	static get attributeTypes() {
-		return [];
+		return {
+			// mangas: {type: XElement.PropertyTypes.object},
+		};
 	}
 
 	static get htmlTemplate() {
@@ -13,17 +15,28 @@ customElements.define(name, class extends XElement {
 	}
 
 	connectedCallback() {
-		this.mangaList = [];
+		this.mangas = [];
 
-		this.$('#add-input').addEventListener('click', () => 0)
-
-		Manga.fromSampleChapterEndpoint('https://mangadex.org/chapter/1179911/1').then(manga => {
-			manga.write(storage.dataDir);
-			this.$('x-manga-progress').setManga(manga);
-		});
+		this.$('#add-button').addEventListener('click', () => {
+			let chapterEndpoint = this.$('#add-input').value;
+			let mangaPromise = Manga.fromSampleChapterEndpoint(chapterEndpoint);
+			this.addManga(mangaPromise, chapterEndpoint);
+		})
 	}
 
-	set preValue(value) {
-		this.$(`#pre-value`).textContent = value;
+	async addManga(mangaPromise, tempTitle = '') {
+		let mangaProgress = document.createElement('x-manga-progress');
+		mangaProgress.title = tempTitle;
+		mangaProgress.addEventListener('remove', async () => {
+			let manga = await mangaPromise;
+			manga.abort();
+			mangaProgress.remove();
+		});
+		this.$('#list').appendChild(mangaProgress);
+
+		let manga = await mangaPromise;
+		mangaProgress.title = await manga.mangaTitlePromise;
+		manga.write(storage.dataDir);
+		mangaProgress.setManga(manga);
 	}
 });

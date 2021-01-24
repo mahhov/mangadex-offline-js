@@ -5,6 +5,7 @@ const Average = require('../../services/Averager');
 customElements.define(name, class extends XElement {
 	static get attributeTypes() {
 		return {
+			title: {},
 			chaptersCount: {type: XElement.PropertyTypes.number},
 			requestsCount: {type: XElement.PropertyTypes.number},
 			requestReadsCount: {type: XElement.PropertyTypes.number},
@@ -18,6 +19,11 @@ customElements.define(name, class extends XElement {
 	}
 
 	connectedCallback() {
+		this.$('#remove').addEventListener('click', () => this.emit('remove'));
+	}
+
+	set title(value) {
+		this.$('#title').textContent = value;
 	}
 
 	set chaptersCount(value) {

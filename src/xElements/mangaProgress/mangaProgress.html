@@ -1,13 +1,37 @@
 <style>
 	:host {
+		display: inline-block;
+		outline: 1px solid #947272; /*todo theme colors*/
+		padding: 3px;
+	}
+
+	#top-row {
 		display: flex;
+		width: 250px;
+		white-space: nowrap;
+		overflow: hidden;
+	}
+
+	#title {
+		flex: 1;
+		overflow: hidden;
+	}
+
+	#remove {
+		margin-left: 10px;
 	}
 
 	x-progress-bar {
 		width: 250px;
-		margin-left:30px;
+		height: 10px;
 	}
 </style>
 
+<div id="top-row">
+	<span id="title"></span> <!--todo max width-->
+	<button id="remove">X</button> <!--todo styling-->
+</div>
 <div><span id="chapters-count"><!--135--></span> chapters</div>
-<x-progress-bar id="progress-bar"></x-progress-bar>
+<div>
+	<x-progress-bar id="progress-bar"></x-progress-bar>
+</div>

@@ -7,8 +7,9 @@ const XPromise = require('./XPromise');
 
 let getQueueChapters = new RateLimitedRetryQueue(100, undefined, 10);
 let getQueuePages = new RateLimitedRetryQueue(100, undefined, 10);
-let get = (endpoint, options = undefined, queue = getQueueChapters) =>
+let get = (endpoint, abortObj = {}, options = undefined, queue = getQueueChapters) =>
 	queue.add(async () => {
+		if (abortObj.aborted) return;
 		try {
 			return (await axios.get(endpoint, options)).data;
 		} catch {
@@ -25,7 +26,7 @@ class Manga {
 		this.id = id;
 		this.language = language;
 
-		this.dataPromise = new XPromise(get(this.endpoint));
+		this.dataPromise = new XPromise(get(this.endpoint, this));
 		this.mangaTitlePromise = this.dataPromise.xThen(dataObj =>
 			dataObj.data.chapters[0]?.mangaTitle);
 		this.chaptersPromise = this.dataPromise.xThen(dataObj =>
@@ -38,7 +39,7 @@ class Manga {
 
 	static async fromSampleChapterEndpoint(sampleChapterEndpoint) {
 		let chapterId = sampleChapterEndpoint.match(/chapter\/(\d+)/i)[1];
-		let sampleChapterResponse = await get(Chapter.endpoint(chapterId));
+		let sampleChapterResponse = await get(Chapter.endpoint(chapterId, this));
 		let mangaId = sampleChapterResponse.data.mangaId;
 		let language = sampleChapterResponse.data.language;
 		return new Manga(mangaId, language);
@@ -50,6 +51,11 @@ class Manga {
 		this.writePromise.resolve();
 	}
 
+	async abort() {
+		this.aborted = true;
+		(await this.chaptersPromise).forEach(chapter => chapter.abort());
+	}
+
 	get endpoint() {
 		return `https://mangadex.org/api/v2/manga/${this.id}/chapters`
 	}
@@ -57,8 +63,8 @@ class Manga {
 	get asJson() {
 		return {
 			id: this.id,
-			language:this.language,
-			mangaTitle:this.mangaTitlePromise.resolvedObj,
+			language: this.language,
+			mangaTitle: this.mangaTitlePromise.resolvedObj,
 			chapters: this.chaptersPromise.resolvedObj?.map(chapter => chapter.asJson),
 		};
 	}
@@ -68,7 +74,7 @@ class Chapter {
 	constructor(id) {
 		this.id = id;
 
-		this.dataPromise = new XPromise(get(this.endpoint));
+		this.dataPromise = new XPromise(get(this.endpoint, this));
 		this.chapterTitlePromise = this.dataPromise.xThen(dataObj =>
 			`${dataObj.data.volume} ${dataObj.data.chapter}`);
 		this.pagesPromise = this.dataPromise.xThen(dataObj => {
@@ -83,6 +89,11 @@ class Chapter {
 		await fs.mkdir(chapterDir, {recursive: true});
 		await Promise.all((await this.pagesPromise).map(page => page.write(chapterDir)));
 		this.writePromise.resolve();
+	}
+
+	async abort() {
+		this.aborted = true;
+		(await this.pagesPromise).forEach(page => page.abort());
 	}
 
 	get endpoint() {
@@ -110,6 +121,7 @@ class Page {
 
 		this.dataPromise = new XPromise(get(
 			this.endpoint,
+			this,
 			{responseType: 'arraybuffer'},
 			getQueuePages));
 		this.writePromise = new XPromise();
@@ -118,6 +130,10 @@ class Page {
 	async write(dir) {
 		await write(path.resolve(dir, this.page), await this.dataPromise);
 		this.writePromise.resolve();
+	}
+
+	abort() {
+		this.aborted = true;
 	}
 
 	get endpoint() {
@@ -137,5 +153,6 @@ module.exports = Manga;
 // skip already downloaded
 // UI
 // viewer
+// error handling
 // only bother for 1 chapter version per chapter (i.e. ignore multiple translations)
 // cache
