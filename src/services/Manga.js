@@ -8,41 +8,40 @@ const XPromise = require('./XPromise');
 let getQueueChapters = new RateLimitedRetryQueue(100, undefined, 10);
 let getQueuePages = new RateLimitedRetryQueue(100, undefined, 10);
 let get = (endpoint, abortObj = {}, options = undefined, queue = getQueueChapters) =>
-	queue.add(async () => {
+	queue.add(() => {
 		if (abortObj.aborted) return;
-		try {
-			return (await axios.get(endpoint, options)).data;
-		} catch {
-			return {};
-		}
-	}); // todo resolve/reject
+		return axios.get(endpoint, options)
+			.then(response => response.data)
+			.catch(() => null);
+	});
 
 let writeQueue = new RateLimitedRetryQueue(100, undefined, 10);
 let write = (path, data) =>
 	writeQueue.add(() => fs.writeFile(path, data));
 
 class Manga {
-	constructor(id, language) {
+	constructor(id, language, dir = undefined) {
 		this.id = id;
 		this.language = language;
 
-		this.dataPromise = new XPromise(get(this.endpoint, this));
-		this.mangaTitlePromise = this.dataPromise.xThen(dataObj =>
-			dataObj.data.chapters[0]?.mangaTitle);
-		this.chaptersPromise = this.dataPromise.xThen(dataObj =>
-			dataObj.data.chapters
+		this.dataPromise = get(this.endpoint, this);
+		this.mangaTitlePromise = this.dataPromise
+			.then(response => response.data.chapters[0].mangaTitle)
+			.catch(() => '');
+		this.chaptersPromise = this.dataPromise
+			.then(response => response.data.chapters
 				.filter(chapter => chapter.language === this.language)
 				.reverse()
-				.map(chapter => new Chapter(chapter.id)));
+				.map(chapter => new Chapter(chapter.id, dir)))
+			.catch(() => []);
 		this.writePromise = new XPromise();
 	}
 
-	static async fromSampleChapterEndpoint(sampleChapterEndpoint) {
+	static fromSampleChapterEndpoint(sampleChapterEndpoint) {
 		let chapterId = sampleChapterEndpoint.match(/chapter\/(\d+)/i)[1];
-		let sampleChapterResponse = await get(Chapter.endpoint(chapterId, this));
-		let mangaId = sampleChapterResponse.data.mangaId;
-		let language = sampleChapterResponse.data.language;
-		return new Manga(mangaId, language);
+		return get(Chapter.endpoint(chapterId, this))
+			.then(response => new Manga(response.mangaId, response.language))
+			.catch(() => null);
 	}
 
 	static fromWritten(dir, title) {
@@ -73,16 +72,17 @@ class Manga {
 }
 
 class Chapter {
-	constructor(id) {
+	constructor(id, dir = undefined) {
 		this.id = id;
 
-		this.dataPromise = new XPromise(get(this.endpoint, this));
-		this.chapterTitlePromise = this.dataPromise.xThen(dataObj =>
-			`${dataObj.data.volume} ${dataObj.data.chapter}`);
-		this.pagesPromise = this.dataPromise.xThen(dataObj => {
-			let {server, hash, pages} = dataObj.data;
-			return pages.map(page => new Page(server, hash, page));
-		});
+		this.dataPromise = get(this.endpoint, this);
+		this.chapterTitlePromise = this.dataPromise
+			.then(response => `${response.data.volume} ${response.data.chapter}`)
+			.catch(() => '');
+		this.pagesPromise = this.dataPromise
+			.then(response =>
+				response.pages.map(page => new Page(response.server, response.hash, page, dir)))
+			.catch(() => []);
 		this.writePromise = new XPromise();
 	}
 
@@ -108,16 +108,17 @@ class Chapter {
 }
 
 class Page {
-	constructor(server, hash, page) {
+	constructor(server, hash, page, dir = undefined) {
 		this.server = server;
 		this.hash = hash;
 		this.page = page;
+		this.dir = dir;
 
-		this.dataPromise = new XPromise(get(
+		this.dataPromise = get(
 			this.endpoint,
 			this,
 			{responseType: 'arraybuffer'},
-			getQueuePages));
+			getQueuePages);
 		this.writePromise = new XPromise();
 	}
 
