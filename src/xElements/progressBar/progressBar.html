@@ -1,31 +1,32 @@
 <style>
 	:host {
 		display: flex;
-		justify-content: space-between;
 		position: relative;
-		align-items: center;
-		cursor: pointer;
-		background-color: var(--dark-blue); ;
+		background-color: var(--dark-blue);
+		/*outline: 2px solid var(--dark-blue);*/
 	}
 
-	#pre-value,
-	#post-value {
-		z-index: 1;
-		margin-left: 10px;
-		margin-right: 10px;
+	:host(.primary-done) {
+		/*outline-color: var(--light-blue);*/
 	}
 
-	#post-value {
-		float: right;
+	:host(.secondary-done) {
+		/*outline-color: var(--white-blue);*/
 	}
 
-	#fill {
+	.fill {
 		position: absolute;
 		height: 100%;
+	}
+
+	#fill-primary {
 		background-color: var(--light-blue);
+	}
+
+	#fill-secondary {
+		background-color: #5e778e;
 	}
 </style>
 
-<span id="pre-value"></span>
-<span id="post-value"></span>
-<span id="fill"></span>
+<span id="fill-primary" class="fill"></span>
+<span id="fill-secondary" class="fill"></span>

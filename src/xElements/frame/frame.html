@@ -1,12 +1,17 @@
 <style>
 	:host {
 		display: flex;
+		flex-direction: column;
+	}
+
+	x-manga-progress {
+		margin-top: 15px;
 	}
 </style>
-
 
 <div>
 	<input id="add-input">
 	<button id="add-button">+</button>
 </div>
-<div id="list"></div>
+<x-manga-progress></x-manga-progress>
+<!--<div id="list"></div>-->

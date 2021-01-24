@@ -2,21 +2,19 @@ const fs = require('fs').promises;
 const path = require('path');
 const dataDir = require('env-paths')('mangadex-offline').data;
 const axios = require('axios');
-const RateLimitedRetryQueue = require('./utils/RateLimitedRetryQueue');
-const XPromise = require('./utils/XPromise');
+const RateLimitedRetryQueue = require('./RateLimitedRetryQueue');
+const XPromise = require('./XPromise');
 
 let getQueueChapters = new RateLimitedRetryQueue(100, undefined, 10);
-let getQueueImages = new RateLimitedRetryQueue(100, undefined, 10);
+let getQueuePages = new RateLimitedRetryQueue(100, undefined, 10);
 let get = (endpoint, options = undefined, queue = getQueueChapters) =>
 	queue.add(async () => {
 		try {
-			console.log('Got', endpoint);
 			return (await axios.get(endpoint, options)).data;
 		} catch {
-			console.error('Failed to get', endpoint);
 			return {};
 		}
-	});
+	}); // todo resolve/reject
 
 let writeQueue = new RateLimitedRetryQueue(100, undefined, 10);
 let write = (path, data) =>
@@ -113,7 +111,7 @@ class Page {
 		this.dataPromise = new XPromise(get(
 			this.endpoint,
 			{responseType: 'arraybuffer'},
-			getQueueImages));
+			getQueuePages));
 		this.writePromise = new XPromise();
 	}
 
@@ -135,15 +133,7 @@ class Page {
 
 module.exports = Manga;
 
-let main = async sampleChapterEndpoint => {
-	let manga = await Manga.fromSampleChapterEndpoint(sampleChapterEndpoint)
-	manga.write(dataDir);
-}
-
-// main('https://mangadex.org/chapter/144329/1');
-// main('https://mangadex.org/chapter/95001/1');
-main('https://mangadex.org/chapter/1179911/1');
-
+// TODO
 // progress bar
 // viewer
 // only bother for 1 chapter version per chapter (i.e. ignore multiple translations)
