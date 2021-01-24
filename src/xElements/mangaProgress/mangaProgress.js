@@ -33,11 +33,11 @@ customElements.define(name, class extends XElement {
 	}
 
 	set pagesCount(value) {
-		this.$('#progress-bar').second = this.pageWritesCount / this.pagesCount;
+		this.$('#progress-bar').secondary = this.pageWritesCount / this.pagesCount;
 	}
 
 	set pageWritesCount(value) {
-		this.$('#progress-bar').second = this.pageWritesCount / this.pagesCount;
+		this.$('#progress-bar').secondary = this.pageWritesCount / this.pagesCount;
 	}
 
 	async setManga(manga) {
@@ -47,20 +47,19 @@ customElements.define(name, class extends XElement {
 		this.requestReadsCount = 0;
 		this.pagesCount = 0;
 		this.pageWritesCount = 0;
-		// todo
-		// this.predictedPagesCount = 0;
-		// this.averagePagesPerChapter = new Average();
+		this.pagesPerChapter = new Average();
 
-		this.requestsCount += 1;
+		this.requestsCount = 1;
 		let chapters = await manga.chaptersPromise;
 		this.chaptersCount += chapters.length;
-		this.requestsCount += chapters.length;
+		this.requestsCount = 1 + chapters.length;
 		this.requestReadsCount += 1;
 		chapters.forEach(async chapter => {
 			let pages = await chapter.pagesPromise;
-			this.requestsCount += pages.length;
+			this.pagesPerChapter.add(pages.length);
+			this.requestsCount = 1 + chapters.length * (this.pagesPerChapter.average + 1);
 			this.requestReadsCount += 1;
-			this.pagesCount += pages.length;
+			this.pagesCount = chapters.length * this.pagesPerChapter.average;
 			pages.forEach(async page => {
 				await page.dataPromise;
 				this.requestReadsCount += 1;

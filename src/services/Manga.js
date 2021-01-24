@@ -47,7 +47,7 @@ class Manga {
 	async write(dir) {
 		let mangaDir = path.resolve(dir, await this.mangaTitlePromise);
 		await Promise.all((await this.chaptersPromise).map(chapter => chapter.write(mangaDir)));
-		this.writePromise = new XPromise().resolve();
+		this.writePromise.resolve();
 	}
 
 	get endpoint() {
@@ -82,7 +82,7 @@ class Chapter {
 		let chapterDir = path.resolve(dir, await this.chapterTitlePromise);
 		await fs.mkdir(chapterDir, {recursive: true});
 		await Promise.all((await this.pagesPromise).map(page => page.write(chapterDir)));
-		this.writePromise = new XPromise().resolve();
+		this.writePromise.resolve();
 	}
 
 	get endpoint() {
@@ -117,7 +117,7 @@ class Page {
 
 	async write(dir) {
 		await write(path.resolve(dir, this.page), await this.dataPromise);
-		this.writePromise = new XPromise().resolve();
+		this.writePromise.resolve();
 	}
 
 	get endpoint() {
@@ -134,8 +134,8 @@ class Page {
 module.exports = Manga;
 
 // TODO
-// progress bar
+// skip already downloaded
+// UI
 // viewer
 // only bother for 1 chapter version per chapter (i.e. ignore multiple translations)
-// skip already downloaded
 // cache

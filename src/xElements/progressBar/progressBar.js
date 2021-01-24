@@ -18,11 +18,11 @@ customElements.define(name, class extends XElement {
 
 	set primary(value) {
 		this.$('#fill-primary').style.width = value * 100 + '%';
-		this.classList.toggle('primary-done', value > 1);
+		this.classList.toggle('primary-done', value >= 1);
 	}
 
 	set secondary(value) {
 		this.$('#fill-secondary').style.width = value * 100 + '%';
-		this.classList.toggle('secondary-done', value > 1);
+		this.classList.toggle('secondary-done', value >= 1);
 	}
 });
