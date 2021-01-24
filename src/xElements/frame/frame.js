@@ -14,14 +14,18 @@ customElements.define(name, class extends XElement {
 		return template;
 	}
 
-	connectedCallback() {
+	async connectedCallback() {
 		this.mangas = [];
 
 		this.$('#add-button').addEventListener('click', () => {
 			let chapterEndpoint = this.$('#add-input').value;
 			let mangaPromise = Manga.fromSampleChapterEndpoint(chapterEndpoint);
 			this.addManga(mangaPromise, chapterEndpoint);
-		})
+		});
+
+		(await storage.writtenMangas).forEach(manga => manga
+			.then(manga => this.addManga(manga))
+			.catch(() => 0));
 	}
 
 	async addManga(mangaPromise, tempTitle = '') {

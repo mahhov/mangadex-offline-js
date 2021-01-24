@@ -45,9 +45,20 @@ class Manga {
 		return new Manga(mangaId, language);
 	}
 
+	static fromWritten(dir, title) {
+		let mangaDir = path.resolve(dir, title);
+		return fs.readFile(path.resolve(mangaDir, 'data.json')).then(file => {
+			let {id, language} = JSON.parse(file);
+			return new Manga(id, language);
+		});
+	}
+
 	async write(dir) {
 		let mangaDir = path.resolve(dir, await this.mangaTitlePromise);
-		await Promise.all((await this.chaptersPromise).map(chapter => chapter.write(mangaDir)));
+		await Promise.all([
+			write(path.resolve(mangaDir, 'data.json'), JSON.stringify({id: this.id, language: this.language})),
+			...(await this.chaptersPromise).map(chapter => chapter.write(mangaDir)),
+		]);
 		this.writePromise.resolve();
 	}
 
@@ -58,15 +69,6 @@ class Manga {
 
 	get endpoint() {
 		return `https://mangadex.org/api/v2/manga/${this.id}/chapters`
-	}
-
-	get asJson() {
-		return {
-			id: this.id,
-			language: this.language,
-			mangaTitle: this.mangaTitlePromise.resolvedObj,
-			chapters: this.chaptersPromise.resolvedObj?.map(chapter => chapter.asJson),
-		};
 	}
 }
 
@@ -103,14 +105,6 @@ class Chapter {
 	static endpoint(id) {
 		return `https://mangadex.org/api/v2/chapter/${id}`;
 	}
-
-	get asJson() {
-		return {
-			id: this.id,
-			chapterTitle: this.chapterTitlePromise.resolvedObj,
-			pages: this.pagesPromise.resolvedObj?.map(page => page.asJson),
-		};
-	}
 }
 
 class Page {
@@ -138,12 +132,6 @@ class Page {
 
 	get endpoint() {
 		return `${this.server}${this.hash}/${this.page}`;
-	}
-
-	get asJson() {
-		return {
-			page: this.page,
-		};
 	}
 }
 
