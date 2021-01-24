@@ -1,6 +1,6 @@
 const {importUtil, XElement} = require('xx-element');
 const {template, name} = importUtil(__filename);
-const storage = require('../../services/storage');
+const Storage = require('../../services/Storage');
 const Manga = require('../../services/Manga');
 
 customElements.define(name, class extends XElement {
@@ -23,7 +23,7 @@ customElements.define(name, class extends XElement {
 			this.addManga(mangaPromise, chapterEndpoint);
 		});
 
-		(await storage.writtenMangas).forEach(manga => manga
+		(await Storage.writtenMangas).forEach(manga => manga
 			.then(manga => this.addManga(manga))
 			.catch(() => 0));
 	}
@@ -40,7 +40,7 @@ customElements.define(name, class extends XElement {
 
 		let manga = await mangaPromise;
 		mangaProgress.title = await manga.mangaTitlePromise;
-		manga.write(storage.dataDir);
+		manga.write(Storage.dataDir);
 		mangaProgress.setManga(manga);
 	}
 });
