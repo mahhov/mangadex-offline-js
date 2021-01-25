@@ -1,6 +1,5 @@
 const fs = require('fs').promises;
 const path = require('path');
-const dataDir = require('env-paths')('mangadex-offline').data;
 const axios = require('axios');
 const RateLimitedRetryQueue = require('./RateLimitedRetryQueue');
 const XPromise = require('./XPromise');
@@ -8,39 +7,40 @@ const XPromise = require('./XPromise');
 let getQueueChapters = new RateLimitedRetryQueue(100, undefined, 10);
 let getQueuePages = new RateLimitedRetryQueue(100, undefined, 10);
 let get = (endpoint, abortObj = {}, options = undefined, queue = getQueueChapters) =>
-	queue.add(() => {
-		if (abortObj.aborted) return;
-		return axios.get(endpoint, options)
-			.then(response => response.data)
-			.catch(() => null);
-	});
+	queue.add(() =>
+		abortObj.aborted ?
+			Promise.resolve(null) :
+			axios.get(endpoint, options).then(response => response.data));
 
 let writeQueue = new RateLimitedRetryQueue(100, undefined, 10);
 let write = (path, data) =>
 	writeQueue.add(() => fs.writeFile(path, data));
 
 class Manga {
-	constructor(id, language, dir = undefined) {
+	constructor(id, language, mangaDir = '') {
 		this.id = id;
 		this.language = language;
 
-		this.dataPromise = get(this.endpoint, this);
-		this.mangaTitlePromise = this.dataPromise
-			.then(response => response.data.chapters[0].mangaTitle)
-			.catch(() => '');
-		this.chaptersPromise = this.dataPromise
+		let responsePromise = get(this.endpoint, this).catch(() => null);
+		this.mangaTitlePromise = responsePromise
+			.then(response => `${response.data.chapters[0].mangaTitle} ${this.language}`)
+			.catch(() => path.basename(mangaDir));
+		this.chaptersPromise = responsePromise
 			.then(response => response.data.chapters
 				.filter(chapter => chapter.language === this.language)
 				.reverse()
-				.map(chapter => new Chapter(chapter.id, dir)))
-			.catch(() => []);
+				.map(chapter => new Chapter(chapter.id, mangaDir)))
+			.catch(async () =>
+				(await fs.readdir(mangaDir))
+					.filter(name => name !== 'data.json')
+					.map(name => new Chapter('', mangaDir, name)));
 		this.writePromise = new XPromise();
 	}
 
 	static fromSampleChapterEndpoint(sampleChapterEndpoint) {
 		let chapterId = sampleChapterEndpoint.match(/chapter\/(\d+)/i)[1];
 		return get(Chapter.endpoint(chapterId, this))
-			.then(response => new Manga(response.mangaId, response.language))
+			.then(response => new Manga(response.data.mangaId, response.data.language))
 			.catch(() => null);
 	}
 
@@ -48,7 +48,7 @@ class Manga {
 		let mangaDir = path.resolve(dir, title);
 		return fs.readFile(path.resolve(mangaDir, 'data.json')).then(file => {
 			let {id, language} = JSON.parse(file);
-			return new Manga(id, language);
+			return new Manga(id, language, mangaDir);
 		});
 	}
 
@@ -72,17 +72,24 @@ class Manga {
 }
 
 class Chapter {
-	constructor(id, dir = undefined) {
+	constructor(id, mangaDir = '', chapterTitle = '') {
 		this.id = id;
 
-		this.dataPromise = get(this.endpoint, this);
-		this.chapterTitlePromise = this.dataPromise
-			.then(response => `${response.data.volume} ${response.data.chapter}`)
-			.catch(() => '');
-		this.pagesPromise = this.dataPromise
-			.then(response =>
-				response.pages.map(page => new Page(response.server, response.hash, page, dir)))
-			.catch(() => []);
+		let responsePromise = get(this.endpoint, this).catch(() => null);
+		this.chapterTitlePromise = responsePromise
+			.then(response => `${response.data.volume || '_'} ${response.data.chapter || '_'}`)
+			.catch(() => chapterTitle);
+		this.pagesPromise = responsePromise
+			.then(async response => {
+				let chapterDir = path.resolve(mangaDir, await this.chapterTitlePromise);
+				return response.data.pages.map(page =>
+					new Page(response.data.server, response.data.hash, page, chapterDir));
+			})
+			.catch(async () => {
+				let chapterDir = path.resolve(mangaDir, await this.chapterTitlePromise);
+				return (await fs.readdir(path.resolve(mangaDir, chapterTitle)))
+					.map(name => new Page('', '', name, chapterDir));
+			});
 		this.writePromise = new XPromise();
 	}
 
@@ -108,22 +115,24 @@ class Chapter {
 }
 
 class Page {
-	constructor(server, hash, page, dir = undefined) {
+	constructor(server, hash, page, chapterDir = '') {
 		this.server = server;
 		this.hash = hash;
 		this.page = page;
-		this.dir = dir;
 
-		this.dataPromise = get(
-			this.endpoint,
-			this,
-			{responseType: 'arraybuffer'},
-			getQueuePages);
 		this.writePromise = new XPromise();
+		this.imagePromise = fs.readFile(path.resolve(chapterDir, this.page))
+			.then(buffer => {
+				this.writePromise.resolve();
+				return buffer;
+			})
+			.catch(() => get(this.endpoint, this, {responseType: 'arraybuffer'}, getQueuePages))
+			.catch(() => null);
 	}
 
 	async write(dir) {
-		await write(path.resolve(dir, this.page), await this.dataPromise);
+		if (this.writePromise.resolved) return;
+		await write(path.resolve(dir, this.page), await this.imagePromise);
 		this.writePromise.resolve();
 	}
 

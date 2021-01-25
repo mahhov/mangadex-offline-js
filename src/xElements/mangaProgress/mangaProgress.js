@@ -19,6 +19,10 @@ customElements.define(name, class extends XElement {
 	}
 
 	connectedCallback() {
+		this.addEventListener('click', () => {
+			console.log(this.manga);
+		})
+		// todo remove downloaded dir on remove
 		this.$('#remove').addEventListener('click', () => this.emit('remove'));
 	}
 
@@ -48,6 +52,8 @@ customElements.define(name, class extends XElement {
 
 	async setManga(manga) {
 		// todo support multiple invocations
+		this.manga = manga;
+
 		this.chaptersCount = 0;
 		this.requestsCount = 0;
 		this.requestReadsCount = 0;
@@ -56,7 +62,7 @@ customElements.define(name, class extends XElement {
 		this.pagesPerChapter = new Average();
 
 		this.requestsCount = 1;
-		let chapters = await manga.chaptersPromise;
+		let chapters = await this.manga.chaptersPromise;
 		this.chaptersCount += chapters.length;
 		this.requestsCount = 1 + chapters.length;
 		this.requestReadsCount += 1;
