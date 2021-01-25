@@ -5,31 +5,34 @@ class XPromise {
 			resolve = res;
 			reject = rej;
 		});
-		xPromise.resolve = resolve;
-		xPromise.reject = reject;
+
+		xPromise.resolvedObj = null;
+		xPromise.resolved = false;
+		xPromise.rejectedObj = null;
+		xPromise.rejected = false;
+		xPromise.done = false;
+
+		xPromise.resolve = obj => {
+			xPromise.resolved = true;
+			xPromise.resolvedObj = obj;
+			xPromise.done = true;
+			resolve(obj);
+		};
+
+		xPromise.reject = obj => {
+			xPromise.rejected = true;
+			xPromise.rejectedObj = obj;
+			xPromise.done = true;
+			reject(obj);
+		};
 
 		xPromise.xThen = handler =>
 			new XPromise(xPromise.then(handler));
 		xPromise.xCatch = handler =>
 			new XPromise(xPromise.catch(handler));
 
-		xPromise.resolvedObj = null;
-		xPromise.resolved = false;
-		xPromise.then(obj => {
-			xPromise.resolved = true;
-			xPromise.resolvedObj = obj;
-		});
-		xPromise.rejectedObj = null;
-		xPromise.rejected = false;
-		xPromise.catch(obj => {
-			xPromise.rejected = true;
-			xPromise.rejectedObj = obj;
-		});
-		xPromise.done = false;
-		xPromise.finally(() => xPromise.done = true);
-
-		promise?.then(resolve);
-		promise?.catch(reject);
+		promise?.then(obj => xPromise.resolve(obj));
+		promise?.catch(obj => xPromise.reject(obj));
 
 		return xPromise;
 	}

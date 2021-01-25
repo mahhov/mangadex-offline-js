@@ -152,8 +152,8 @@ class Page {
 	}
 
 	async write(chapterDir) {
+		await this.imagePromise;
 		if (this.writePromise.resolved) return;
-		// console.log('WRITE') // todo why are we writing dir-loaded images?
 		await write(path.resolve(chapterDir, this.id), await this.imagePromise);
 		this.writePromise.resolve();
 	}
