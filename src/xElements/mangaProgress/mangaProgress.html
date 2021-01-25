@@ -2,13 +2,8 @@
 	@import 'sharedStyle.css';
 
 	:host {
-		display: contents;
-	}
-
-	#container {
 		display: inline-block;
 		padding: 3px;
-		margin: 3px;
 	}
 
 	#top-row {
@@ -33,13 +28,11 @@
 	}
 </style>
 
-<div id="container" class="interactable interactable-container">
-	<div id="top-row">
-		<span id="title"></span>
-		<button id="remove">X</button>
-	</div>
-	<div><span id="chapters-count"><!--135--></span> chapters</div>
-	<div>
-		<x-progress-bar id="progress-bar"></x-progress-bar>
-	</div>
+<div id="top-row">
+	<span id="title"></span>
+	<button id="remove">X</button>
+</div>
+<div><span id="chapters-count"><!--135--></span> chapters</div>
+<div>
+	<x-progress-bar id="progress-bar"></x-progress-bar>
 </div>

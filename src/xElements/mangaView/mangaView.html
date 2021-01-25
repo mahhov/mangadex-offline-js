@@ -14,6 +14,10 @@
 		display: none;
 	}
 
+	.row {
+		margin-top: 15px;
+	}
+
 	img:empty {
 		min-width: 100px;
 		min-height: 100px;
@@ -22,10 +26,10 @@
 </style>
 
 <x-button-selector id="chapter-selector"></x-button-selector>
-<div>
+<div class="row">
 	<button id="retry-chapter">Retry chapter</button>
 </div>
-<div id="images-container"></div>
-<div>
+<div id="images-container" class="row"></div>
+<div class="row">
 	<button id="next">Next</button>
 </div>

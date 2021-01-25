@@ -20,6 +20,8 @@ customElements.define(name, class extends XElement {
 	}
 
 	connectedCallback() {
+		this.classList.add('interactable', 'interactable-container');
+
 		this.addEventListener('click', () => this.emit('view'));
 		this.$('#remove').addEventListener('click', e => {
 			e.stopPropagation();
@@ -32,7 +34,7 @@ customElements.define(name, class extends XElement {
 	}
 
 	set selected(value) {
-		this.$('#container').classList.toggle('selected', value);
+		this.classList.toggle('selected', value);
 	}
 
 	set chaptersCount(value) {

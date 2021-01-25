@@ -178,7 +178,6 @@ module.exports = Manga;
 // TODO
 // allow manual loading of chapters
 // button to restart downloads
-// button to clear chapter downloads and restart with top priority
 // only bother for 1 chapter version per chapter (i.e. ignore multiple translations)
 // cache
 // error handling
