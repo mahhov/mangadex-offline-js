@@ -1,0 +1,34 @@
+button,
+input,
+::-webkit-scrollbar-thumb,
+.interactable {
+	border: 1px solid var(--outline-gray);
+	background: var(--fill-dark-blue);
+	color: white;
+}
+
+button:hover,
+input:hover,
+::-webkit-scrollbar-thumb:hover,
+.interactable:hover {
+	background: var(--fill-med-blue);
+}
+
+button:active,
+input.active,
+::-webkit-scrollbar-thumb:active,
+.interactable.selected,
+:checked + .interactable {
+	background: var(--fill-light-blue);
+}
+
+:focus {
+	outline: none;
+	border: 1px solid white;
+}
+
+::-webkit-scrollbar {
+	background: black;
+	border: 1px solid white;
+	width: 12px;
+}

@@ -30,6 +30,8 @@ customElements.define(name, class extends XElement {
 			label.appendChild(radio);
 
 			let span = document.createElement('span');
+			span.classList.add('interactable')
+			span.textContent = '_';
 			label.appendChild(span);
 
 			let optionResolved = await option;

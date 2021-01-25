@@ -31,7 +31,7 @@ customElements.define(name, class extends XElement {
 		});
 		this.$('#next').addEventListener('click', () => {
 			this.$('#chapter-selector').selectedIndex = ++this.chapterIndex;
-			document.body.scrollTop = 0;
+			document.body.scrollTop = 0; // todo use scroll into view
 		});
 	}
 

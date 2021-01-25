@@ -1,13 +1,13 @@
 <style>
+	@import 'sharedStyle.css';
+
 	:host {
-		display: inline-block;
-		outline: 1px solid #947272; /*todo theme colors*/
-		padding: 3px;
-		cursor: pointer;
+		display: contents;
 	}
 
-	:host(.selected) {
-		background: red;
+	#container {
+		display: inline-block;
+		padding: 3px;
 	}
 
 	#top-row {
@@ -32,11 +32,13 @@
 	}
 </style>
 
-<div id="top-row">
-	<span id="title"></span>
-	<button id="remove">X</button> <!--todo styling-->
-</div>
-<div><span id="chapters-count"><!--135--></span> chapters</div>
-<div>
-	<x-progress-bar id="progress-bar"></x-progress-bar>
+<div id="container" class="interactable">
+	<div id="top-row">
+		<span id="title"></span>
+		<button id="remove">X</button> <!--todo styling-->
+	</div>
+	<div><span id="chapters-count"><!--135--></span> chapters</div>
+	<div>
+		<x-progress-bar id="progress-bar"></x-progress-bar>
+	</div>
 </div>

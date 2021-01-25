@@ -2,16 +2,12 @@
 	:host {
 		display: flex;
 		position: relative;
-		background-color: var(--dark-blue);
-		border: 1px solid #d2d3e8;
+		background-color: var(--fill-dark-blue);
+		border: 1px solid var(--outline-blue);
 	}
 
-	:host(.primary-done) {
-		/*border-color: */
-	}
-
-	:host(.secondary-done) {
-		border-color: #5e778e
+	:host(.done) {
+		border-color: var(--fill-light-blue);
 	}
 
 	.fill {
@@ -20,11 +16,11 @@
 	}
 
 	#fill-primary {
-		background-color: var(--light-blue);
+		background-color: var(--fill-med-blue);
 	}
 
 	#fill-secondary {
-		background-color: #5e778e;
+		background-color: var(--fill-light-blue);
 	}
 </style>
 

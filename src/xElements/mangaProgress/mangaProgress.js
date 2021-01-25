@@ -32,7 +32,7 @@ customElements.define(name, class extends XElement {
 	}
 
 	set selected(value) {
-		this.classList.toggle('selected', value);
+		this.$('#container').classList.toggle('selected', value);
 	}
 
 	set chaptersCount(value) {
