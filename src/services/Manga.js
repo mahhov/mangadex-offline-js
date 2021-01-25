@@ -89,8 +89,8 @@ class Chapter {
 		this.pagesPromise = responsePromise
 			.then(async response => {
 				let chapterDir = path.resolve(mangaDir, await this.chapterTitlePromise);
-				return response.data.pages.map(page =>
-					new Page(response.data.server, response.data.hash, page, chapterDir));
+				return response.data.pages.map(pageId =>
+					new Page(response.data.server, response.data.hash, pageId, chapterDir));
 			})
 			.catch(async () => {
 				let chapterDir = path.resolve(mangaDir, await this.chapterTitlePromise);
@@ -122,24 +122,25 @@ class Chapter {
 }
 
 class Page {
-	constructor(server, hash, page, chapterDir = '') {
+	constructor(server, hash, id, chapterDir = '') {
 		this.server = server;
 		this.hash = hash;
-		this.page = page;
+		this.id = id;
 
 		this.writePromise = new XPromise();
-		this.imagePromise = fs.readFile(path.resolve(chapterDir, this.page))
+		this.imagePromise = fs.readFile(path.resolve(chapterDir, this.id))
 			.then(buffer => {
 				this.writePromise.resolve();
 				return buffer;
 			})
-			.catch(() => get(this.endpoint, this, {responseType: 'arraybuffer'}, getQueuePages))
+			.catch(async () =>
+				Buffer.from(await get(this.endpoint, this, {responseType: 'arraybuffer'}, getQueuePages)))
 			.catch(() => null);
 	}
 
 	async write(chapterDir) {
 		if (this.writePromise.resolved) return;
-		await write(path.resolve(chapterDir, this.page), await this.imagePromise);
+		await write(path.resolve(chapterDir, this.id), await this.imagePromise);
 		this.writePromise.resolve();
 	}
 
@@ -148,16 +149,13 @@ class Page {
 	}
 
 	get endpoint() {
-		return `${this.server}${this.hash}/${this.page}`;
+		return `${this.server}${this.hash}/${this.id}`;
 	}
 }
 
 module.exports = Manga;
 
 // TODO
-// skip already downloaded
-// UI
 // viewer
-// error handling
 // only bother for 1 chapter version per chapter (i.e. ignore multiple translations)
 // cache

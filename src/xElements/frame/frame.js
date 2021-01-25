@@ -5,9 +5,7 @@ const Manga = require('../../services/Manga');
 
 customElements.define(name, class extends XElement {
 	static get attributeTypes() {
-		return {
-			// mangas: {type: XElement.PropertyTypes.object},
-		};
+		return {};
 	}
 
 	static get htmlTemplate() {
@@ -31,6 +29,8 @@ customElements.define(name, class extends XElement {
 	async addManga(mangaPromise, tempTitle = '') {
 		let mangaProgress = document.createElement('x-manga-progress');
 		mangaProgress.title = tempTitle;
+		mangaProgress.addEventListener('view', async () =>
+			this.$('#view').manga = await mangaPromise);
 		mangaProgress.addEventListener('remove', async () => {
 			await (await mangaPromise).removeWritten(Storage.dataDir);
 			mangaProgress.remove();

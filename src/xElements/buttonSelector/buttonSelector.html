@@ -1,0 +1,30 @@
+<style>
+	:host {
+		display: flex;
+	}
+
+	input {
+		display: none;
+	}
+
+	label {
+		display: contents;
+	}
+
+	span {
+		display: inline-block;
+		outline: 1px solid white;
+		padding: 5px;
+		margin: 5px;
+	}
+
+	span:hover {
+		background: gray;
+	}
+
+	:checked + span {
+		background: red;
+	}
+</style>
+
+<div id="container"></div>

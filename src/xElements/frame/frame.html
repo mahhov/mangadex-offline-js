@@ -4,14 +4,24 @@
 		flex-direction: column;
 	}
 
-	x-manga-progress {
+	#top-row {
+		display: flex;
+	}
+
+	#top-row input {
+		flex: 1;
+	}
+
+	#list, #view {
 		margin-top: 15px;
 	}
 </style>
 
-<div>
+<div id="top-row">
 	<!--todo remove value-->
 	<input id="add-input" placeholder="/chapter/<#######>/" value="https://mangadex.org/chapter/1179911/1">
+	<!--todo on enter key, trigger add-button-->
 	<button id="add-button">+</button>
 </div>
 <div id="list"></div>
+<x-manga-view id="view"></x-manga-view>

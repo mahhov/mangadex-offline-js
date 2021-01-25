@@ -19,9 +19,7 @@ customElements.define(name, class extends XElement {
 	}
 
 	connectedCallback() {
-		this.addEventListener('click', () => {
-			console.log(this.manga);
-		})
+		this.addEventListener('click', () => this.emit('view'));
 		this.$('#remove').addEventListener('click', e => {
 			e.stopPropagation();
 			this.emit('remove');
