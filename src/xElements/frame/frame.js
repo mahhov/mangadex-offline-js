@@ -29,9 +29,11 @@ customElements.define(name, class extends XElement {
 	async addManga(mangaPromise, tempTitle = '') {
 		let mangaProgress = document.createElement('x-manga-progress');
 		mangaProgress.title = tempTitle;
+		// todo indicate which manga is selected with background color
 		mangaProgress.addEventListener('view', async () =>
 			this.$('#view').manga = await mangaPromise);
 		mangaProgress.addEventListener('remove', async () => {
+			// todo clear manga view when removing selected manga
 			await (await mangaPromise).removeWritten(Storage.dataDir);
 			mangaProgress.remove();
 		});

@@ -161,6 +161,5 @@ class Page {
 module.exports = Manga;
 
 // TODO
-// viewer
 // only bother for 1 chapter version per chapter (i.e. ignore multiple translations)
 // cache
