@@ -15,23 +15,33 @@ customElements.define(name, class extends XElement {
 	async connectedCallback() {
 		this.mangas = [];
 
-		this.$('#add-button').addEventListener('click', () => {
-			let chapterEndpoint = this.$('#add-input').value;
-			let mangaPromise = Manga.fromSampleChapterEndpoint(chapterEndpoint);
-			this.addManga(mangaPromise, chapterEndpoint);
+		this.$('#add-input').addEventListener('keydown', ({key}) => {
+			if (key === 'Enter')
+				this.addInputedManga();
 		});
+
+		this.$('#add-button').addEventListener('click', () =>
+			this.addInputedManga());
 
 		(await Storage.writtenMangas).forEach(manga => manga
 			.then(manga => this.addManga(manga))
 			.catch(() => 0));
 	}
 
+	addInputedManga() {
+		let chapterEndpoint = this.$('#add-input').value;
+		let mangaPromise = Manga.fromSampleChapterEndpoint(chapterEndpoint);
+		this.addManga(mangaPromise, chapterEndpoint);
+	}
+
 	async addManga(mangaPromise, tempTitle = '') {
 		let mangaProgress = document.createElement('x-manga-progress');
 		mangaProgress.title = tempTitle;
-		// todo indicate which manga is selected with background color
-		mangaProgress.addEventListener('view', async () =>
-			this.$('#view').manga = await mangaPromise);
+		mangaProgress.addEventListener('view', async () => {
+			this.$('#view').manga = await mangaPromise;
+			[...this.$('#list').children].forEach(mangaProgressI =>
+				mangaProgressI.selected = mangaProgressI === mangaProgress)
+		});
 		mangaProgress.addEventListener('remove', async () => {
 			// todo clear manga view when removing selected manga
 			await (await mangaPromise).removeWritten(Storage.dataDir);

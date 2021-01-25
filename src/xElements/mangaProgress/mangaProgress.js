@@ -6,6 +6,7 @@ customElements.define(name, class extends XElement {
 	static get attributeTypes() {
 		return {
 			title: {},
+			selected: {type: XElement.PropertyTypes.boolean},
 			chaptersCount: {type: XElement.PropertyTypes.number},
 			requestsCount: {type: XElement.PropertyTypes.number},
 			requestReadsCount: {type: XElement.PropertyTypes.number},
@@ -28,6 +29,10 @@ customElements.define(name, class extends XElement {
 
 	set title(value) {
 		this.$('#title').textContent = value;
+	}
+
+	set selected(value) {
+		this.classList.toggle('selected', value);
 	}
 
 	set chaptersCount(value) {

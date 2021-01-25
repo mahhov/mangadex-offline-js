@@ -41,7 +41,7 @@ class Manga {
 	}
 
 	static fromSampleChapterEndpoint(sampleChapterEndpoint) {
-		let chapterId = sampleChapterEndpoint.match(/chapter\/(\d+)/i)[1];
+		let chapterId = sampleChapterEndpoint.match(/chapter\/(\d+)/i)?.[1];
 		return get(Chapter.endpoint(chapterId, this))
 			.then(response => new Manga(response.data.mangaId, response.data.language))
 			.catch(() => null);
@@ -111,8 +111,6 @@ class Chapter {
 	async retry() {
 		await this.abort();
 		this.init(this.id);
-		// todo
-		// this.write();
 	}
 
 	async write(mangaDir) {
@@ -181,3 +179,4 @@ module.exports = Manga;
 // button to clear chapter downloads and restart with top priority
 // only bother for 1 chapter version per chapter (i.e. ignore multiple translations)
 // cache
+// error handling
