@@ -40,7 +40,6 @@ customElements.define(name, class extends XElement {
 		this.$('#list').appendChild(mangaProgress);
 
 		let manga = await mangaPromise;
-		mangaProgress.title = await manga.mangaTitlePromise;
 		manga.write(Storage.dataDir);
 		mangaProgress.setManga(manga);
 	}

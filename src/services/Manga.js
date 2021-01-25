@@ -47,8 +47,8 @@ class Manga {
 			.catch(() => null);
 	}
 
-	static fromWritten(dir, title) {
-		let mangaDir = path.resolve(dir, title);
+	static fromWritten(parentDir, title) {
+		let mangaDir = path.resolve(parentDir, title);
 		return fs.readFile(path.resolve(mangaDir, 'data.json')).then(file => {
 			let {id, language} = JSON.parse(file);
 			return new Manga(id, language, mangaDir);

@@ -54,6 +54,7 @@ customElements.define(name, class extends XElement {
 		// todo support multiple invocations
 		this.manga = manga;
 
+		this.title = await this.manga.mangaTitlePromise;
 		this.chaptersCount = 0;
 		this.requestsCount = 0;
 		this.requestReadsCount = 0;

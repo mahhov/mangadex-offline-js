@@ -1,5 +1,6 @@
 const {importUtil, XElement} = require('xx-element');
 const {template, name} = importUtil(__filename);
+const path = require('path');
 const Storage = require('../../services/Storage');
 const Manga = require('../../services/Manga');
 
@@ -23,7 +24,9 @@ customElements.define(name, class extends XElement {
 			this.chapterIndex = e.detail);
 		this.$('#retry-chapter').addEventListener('click', async () => {
 			if (!this.manga) return;
-			await (await this.manga.chaptersPromise)[this.chapterIndex].retry();
+			let chapter = (await this.manga.chaptersPromise)[this.chapterIndex];
+			await chapter.retry();
+			chapter.write(path.resolve(Storage.dataDir, await this.manga.mangaTitlePromise));
 			this.chapterIndex = this.chapterIndex;
 		});
 		this.$('#next').addEventListener('click', () => {
