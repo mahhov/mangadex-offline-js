@@ -5,6 +5,7 @@ customElements.define(name, class extends XElement {
 	static get attributeTypes() {
 		return {
 			options: {type: XElement.PropertyTypes.object},
+			selectedIndex: {type: XElement.PropertyTypes.number},
 		};
 	}
 
@@ -32,8 +33,13 @@ customElements.define(name, class extends XElement {
 
 			let optionResolved = await option;
 			radio.value = optionResolved;
-			radio.addEventListener('input', () => this.emit('select', [optionResolved, i]));
+			radio.addEventListener('input', () => this.emit('select', i));
 			span.textContent = optionResolved;
 		});
+	}
+
+	set selectedIndex(value) {
+		let radio = this.$(`#container > label:nth-child(${value + 1}) > input`);
+		if (radio) radio.checked = true;
 	}
 });

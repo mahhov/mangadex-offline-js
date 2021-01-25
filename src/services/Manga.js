@@ -153,13 +153,16 @@ class Page {
 	}
 
 	get imageSrc() {
-		return this.imagePromise.then(image =>
-			'data:image/jpeg;base64,' + image.toString('base64'));
+		return this.imagePromise
+			.then(image => 'data:image/jpeg;base64,' + image.toString('base64'))
+			.catch(() => '');
 	}
 }
 
 module.exports = Manga;
 
 // TODO
+// button to restart downloads
+// button to clear chapter downloads and restart with top priority
 // only bother for 1 chapter version per chapter (i.e. ignore multiple translations)
 // cache

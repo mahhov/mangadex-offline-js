@@ -8,6 +8,7 @@ customElements.define(name, class extends XElement {
 		return {
 			manga: {type: XElement.PropertyTypes.object},
 			chapter: {type: XElement.PropertyTypes.object},
+			chapterIndex: {type: XElement.PropertyTypes.number},
 		};
 	}
 
@@ -16,9 +17,12 @@ customElements.define(name, class extends XElement {
 	}
 
 	async connectedCallback() {
-		// todo dequeu select async requests if a newer request has been received
-		this.$('#chapter-selector').addEventListener('select', async ({detail: [_, i]}) =>
-			this.chapter = (await this.manga.chaptersPromise)[i]);
+		this.$('#chapter-selector').addEventListener('select', e =>
+			this.chapterIndex = e.detail);
+		this.$('#next').addEventListener('click', () => {
+			this.$('#chapter-selector').selectedIndex = ++this.chapterIndex;
+			document.body.scrollTop = 0;
+		});
 	}
 
 	set manga(value) {
@@ -38,6 +42,13 @@ customElements.define(name, class extends XElement {
 				this.$('#images-container').appendChild(image);
 				image.src = await page.imageSrc;
 			});
+		});
+	}
+
+	set chapterIndex(value) {
+		this.manga?.chaptersPromise?.then(chapters => {
+			if (value !== this.chapterIndex) return;
+			this.chapter = chapters[value];
 		});
 	}
 });
