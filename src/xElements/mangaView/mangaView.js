@@ -8,7 +8,6 @@ customElements.define(name, class extends XElement {
 		return {
 			manga: {type: XElement.PropertyTypes.object},
 			chapter: {type: XElement.PropertyTypes.object},
-			page: {type: XElement.PropertyTypes.object},
 		};
 	}
 
@@ -17,11 +16,9 @@ customElements.define(name, class extends XElement {
 	}
 
 	async connectedCallback() {
-		// todo dequeu select async requests if a newer request has been recieved
+		// todo dequeu select async requests if a newer request has been received
 		this.$('#chapter-selector').addEventListener('select', async ({detail: [_, i]}) =>
 			this.chapter = (await this.manga.chaptersPromise)[i]);
-		this.$('#page-selector').addEventListener('select', async ({detail: [_, i]}) =>
-			this.page = (await this.chapter.pagesPromise)[i]);
 	}
 
 	set manga(value) {
@@ -35,15 +32,12 @@ customElements.define(name, class extends XElement {
 	set chapter(value) {
 		value.pagesPromise.then(pages => {
 			if (value !== this.chapter) return;
-			this.$('#page-selector').options = pages.map(page => page.id);
-			this.page = pages[0];
-		});
-	}
-
-	set page(value) {
-		value.imagePromise.then(image => {
-			if (value !== this.page) return;
-			this.$('#page-view').src = 'data:image/jpeg;base64,' + image.toString('base64');
+			this.clearChildren('#images-container');
+			pages.forEach(async page => {
+				let image = document.createElement('img');
+				this.$('#images-container').appendChild(image);
+				image.src = await page.imageSrc;
+			});
 		});
 	}
 });

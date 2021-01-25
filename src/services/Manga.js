@@ -151,6 +151,11 @@ class Page {
 	get endpoint() {
 		return `${this.server}${this.hash}/${this.id}`;
 	}
+
+	get imageSrc() {
+		return this.imagePromise.then(image =>
+			'data:image/jpeg;base64,' + image.toString('base64'));
+	}
 }
 
 module.exports = Manga;
