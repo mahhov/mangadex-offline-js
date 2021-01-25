@@ -18,6 +18,13 @@ class RateLimitedRetryQueue {
 		});
 	}
 
+	addFront(handler) {
+		return new Promise((resolve, reject) => {
+			this.queue.unshift([handler, resolve, reject]);
+			this.activate_();
+		});
+	}
+
 	async next_(handler, resolve, reject) {
 		for (let retry of this.retries)
 			try {

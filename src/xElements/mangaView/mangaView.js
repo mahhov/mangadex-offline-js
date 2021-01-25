@@ -7,8 +7,8 @@ customElements.define(name, class extends XElement {
 	static get attributeTypes() {
 		return {
 			manga: {type: XElement.PropertyTypes.object},
-			chapter: {type: XElement.PropertyTypes.object},
-			chapterIndex: {type: XElement.PropertyTypes.number},
+			chapter: {type: XElement.PropertyTypes.object, allowRedundantAssignment: true},
+			chapterIndex: {type: XElement.PropertyTypes.number, allowRedundantAssignment: true},
 		};
 	}
 
@@ -17,8 +17,15 @@ customElements.define(name, class extends XElement {
 	}
 
 	async connectedCallback() {
+		this.manga = null;
+
 		this.$('#chapter-selector').addEventListener('select', e =>
 			this.chapterIndex = e.detail);
+		this.$('#retry-chapter').addEventListener('click', async () => {
+			if (!this.manga) return;
+			await (await this.manga.chaptersPromise)[this.chapterIndex].retry();
+			this.chapterIndex = this.chapterIndex;
+		});
 		this.$('#next').addEventListener('click', () => {
 			this.$('#chapter-selector').selectedIndex = ++this.chapterIndex;
 			document.body.scrollTop = 0;
@@ -26,16 +33,21 @@ customElements.define(name, class extends XElement {
 	}
 
 	set manga(value) {
-		value.chaptersPromise.then(async chapters => {
+		this.classList.remove('loaded-chapters');
+		if (!value) return;
+		value.chaptersPromise.then(chapters => {
 			if (value !== this.manga) return;
+			this.classList.add('loaded-chapters');
 			this.$('#chapter-selector').options = chapters.map(chapter => chapter.chapterTitlePromise);
-			this.chapter = chapters[0];
+			this.chapterIndex = 0;
 		});
 	}
 
 	set chapter(value) {
+		this.classList.remove('loaded-pages');
 		value.pagesPromise.then(pages => {
 			if (value !== this.chapter) return;
+			this.classList.add('loaded-pages');
 			this.clearChildren('#images-container');
 			pages.forEach(async page => {
 				let image = document.createElement('img');

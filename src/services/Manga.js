@@ -6,12 +6,14 @@ const XPromise = require('./XPromise');
 
 let getQueueChapters = new RateLimitedRetryQueue(100, undefined, 10);
 let getQueuePages = new RateLimitedRetryQueue(100, undefined, 10);
-let get = (endpoint, abortObj = {}, options = undefined, queue = getQueueChapters) =>
-	queue.add(() =>
+let get = (endpoint, abortObj = {}, options = undefined, queue = getQueueChapters, highPriority = false) => {
+	let handler = () =>
 		abortObj.aborted ?
 			Promise.resolve(null) :
 			axios.get(endpoint, options).then(response =>
-				abortObj.aborted ? null : response.data));
+				abortObj.aborted ? null : response.data);
+	return highPriority ? queue.addFront(handler) : queue.add(handler);
+};
 
 let writeQueue = new RateLimitedRetryQueue(100, undefined, 10);
 let write = (path, data) =>
@@ -80,9 +82,15 @@ class Manga {
 
 class Chapter {
 	constructor(id, mangaDir = '', chapterTitle = '') {
-		this.id = id;
+		this.init(id, mangaDir, chapterTitle);
+	}
 
-		let responsePromise = get(this.endpoint, this).catch(() => null);
+	init(id, mangaDir = '', chapterTitle = '') {
+		this.id = id;
+		let wasAborted = this.aborted;
+		this.aborted = false;
+
+		let responsePromise = get(this.endpoint, this, undefined, undefined, wasAborted).catch(() => null);
 		this.chapterTitlePromise = responsePromise
 			.then(response => `${response.data.volume || '_'} ${response.data.chapter || '_'}`)
 			.catch(() => chapterTitle);
@@ -98,6 +106,13 @@ class Chapter {
 					.map(name => new Page('', '', name, chapterDir));
 			});
 		this.writePromise = new XPromise();
+	}
+
+	async retry() {
+		await this.abort();
+		this.init(this.id);
+		// todo
+		// this.write();
 	}
 
 	async write(mangaDir) {
