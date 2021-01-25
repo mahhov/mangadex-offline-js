@@ -43,7 +43,8 @@ customElements.define(name, class extends XElement {
 				mangaProgressI.selected = mangaProgressI === mangaProgress)
 		});
 		mangaProgress.addEventListener('remove', async () => {
-			// todo clear manga view when removing selected manga
+			if (mangaProgress.selected)
+				this.$('#view').manga = null;
 			await (await mangaPromise).removeWritten(Storage.dataDir);
 			mangaProgress.remove();
 		});

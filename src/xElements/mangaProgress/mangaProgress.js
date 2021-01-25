@@ -56,7 +56,7 @@ customElements.define(name, class extends XElement {
 	}
 
 	async setManga(manga) {
-		// todo support multiple invocations
+		// should only be invoked once
 		this.manga = manga;
 
 		this.title = await this.manga.mangaTitlePromise;
