@@ -10,7 +10,8 @@ let get = (endpoint, abortObj = {}, options = undefined, queue = getQueueChapter
 	queue.add(() =>
 		abortObj.aborted ?
 			Promise.resolve(null) :
-			axios.get(endpoint, options).then(response => response.data));
+			axios.get(endpoint, options).then(response =>
+				abortObj.aborted ? null : response.data));
 
 let writeQueue = new RateLimitedRetryQueue(100, undefined, 10);
 let write = (path, data) =>
@@ -52,13 +53,19 @@ class Manga {
 		});
 	}
 
-	async write(dir) {
-		let mangaDir = path.resolve(dir, await this.mangaTitlePromise);
+	async write(parentDir) {
+		let mangaDir = path.resolve(parentDir, await this.mangaTitlePromise);
 		await Promise.all([
 			write(path.resolve(mangaDir, 'data.json'), JSON.stringify({id: this.id, language: this.language})),
 			...(await this.chaptersPromise).map(chapter => chapter.write(mangaDir)),
 		]);
 		this.writePromise.resolve();
+	}
+
+	async removeWritten(parentDir) {
+		await this.abort();
+		let mangaDir = path.resolve(parentDir, await this.mangaTitlePromise);
+		await fs.rmdir(mangaDir, {recursive: true});
 	}
 
 	async abort() {
@@ -93,8 +100,8 @@ class Chapter {
 		this.writePromise = new XPromise();
 	}
 
-	async write(dir) {
-		let chapterDir = path.resolve(dir, await this.chapterTitlePromise);
+	async write(mangaDir) {
+		let chapterDir = path.resolve(mangaDir, await this.chapterTitlePromise);
 		await fs.mkdir(chapterDir, {recursive: true});
 		await Promise.all((await this.pagesPromise).map(page => page.write(chapterDir)));
 		this.writePromise.resolve();
@@ -130,9 +137,9 @@ class Page {
 			.catch(() => null);
 	}
 
-	async write(dir) {
+	async write(chapterDir) {
 		if (this.writePromise.resolved) return;
-		await write(path.resolve(dir, this.page), await this.imagePromise);
+		await write(path.resolve(chapterDir, this.page), await this.imagePromise);
 		this.writePromise.resolve();
 	}
 

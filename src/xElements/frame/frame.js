@@ -32,8 +32,7 @@ customElements.define(name, class extends XElement {
 		let mangaProgress = document.createElement('x-manga-progress');
 		mangaProgress.title = tempTitle;
 		mangaProgress.addEventListener('remove', async () => {
-			let manga = await mangaPromise;
-			manga.abort();
+			await (await mangaPromise).removeWritten(Storage.dataDir);
 			mangaProgress.remove();
 		});
 		this.$('#list').appendChild(mangaProgress);

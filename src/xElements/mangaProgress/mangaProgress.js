@@ -22,8 +22,10 @@ customElements.define(name, class extends XElement {
 		this.addEventListener('click', () => {
 			console.log(this.manga);
 		})
-		// todo remove downloaded dir on remove
-		this.$('#remove').addEventListener('click', () => this.emit('remove'));
+		this.$('#remove').addEventListener('click', e => {
+			e.stopPropagation();
+			this.emit('remove');
+		});
 	}
 
 	set title(value) {
