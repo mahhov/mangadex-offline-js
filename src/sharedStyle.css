@@ -4,7 +4,11 @@ input,
 .interactable {
 	border: 1px solid var(--outline-gray);
 	background: var(--fill-dark-blue);
-	color: white;
+	color: var(--primary);
+}
+
+.interactable-container {
+	background: var(--fill-dark-gray);
 }
 
 button:hover,
@@ -24,11 +28,15 @@ input.active,
 
 :focus {
 	outline: none;
-	border: 1px solid white;
+	border: 1px solid var(--primary);
 }
 
 ::-webkit-scrollbar {
-	background: black;
-	border: 1px solid white;
+	background: var(--back);
+	border: 1px solid var(--outline-gray);
 	width: 12px;
+}
+
+input {
+	padding: 3px;
 }

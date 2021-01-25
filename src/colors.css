@@ -1,0 +1,12 @@
+:root {
+	--primary: white;
+	--back: black;
+
+	--fill-dark-blue: #1c2a35;
+	--fill-med-blue: #3c5165;
+	--fill-light-blue: #5e778e;
+	--fill-dark-gray: #3e3e3e;
+
+	--outline-gray: #777;
+	--outline-blue: #d2d3e8;
+}

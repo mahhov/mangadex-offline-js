@@ -153,6 +153,7 @@ class Page {
 
 	async write(chapterDir) {
 		if (this.writePromise.resolved) return;
+		// console.log('WRITE') // todo why are we writing dir-loaded images?
 		await write(path.resolve(chapterDir, this.id), await this.imagePromise);
 		this.writePromise.resolve();
 	}
@@ -175,6 +176,7 @@ class Page {
 module.exports = Manga;
 
 // TODO
+// allow manual loading of chapters
 // button to restart downloads
 // button to clear chapter downloads and restart with top priority
 // only bother for 1 chapter version per chapter (i.e. ignore multiple translations)
