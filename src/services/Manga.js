@@ -15,6 +15,15 @@ let get = (endpoint, abortObj = {}, options = undefined, queue = getQueueChapter
 	return highPriority ? queue.addFront(handler) : queue.add(handler);
 };
 
+let sortNames = (name1, name2) => {
+	let [nums1, nums2] = [name1, name2].map(name =>
+		name.split(/[^\d]+/).map(s => Number(s)));
+	for (let i = 0; i < Math.min(nums1.length, nums2.length); i++)
+		if (nums1[i] !== nums2[i])
+			return nums1[i] - nums2[i];
+	return nums1.length - nums2.length;
+};
+
 let writeQueue = new RateLimitedRetryQueue(100, undefined, 10);
 let write = (path, data) =>
 	writeQueue.add(() => fs.writeFile(path, data)).promise;
@@ -37,6 +46,7 @@ class Manga {
 			.catch(async () =>
 				(await fs.readdir(mangaDir))
 					.filter(name => name !== 'data.json')
+					.sort(sortNames)
 					.map(name => new Chapter('', mangaDir, name)));
 		this.writePromise = new XPromise();
 	}
@@ -105,6 +115,7 @@ class Chapter {
 			.catch(async () => {
 				let chapterDir = path.resolve(mangaDir, await this.chapterTitlePromise);
 				return (await fs.readdir(path.resolve(mangaDir, chapterTitle)))
+					.sort(sortNames)
 					.map(name => new Page('', '', name, chapterDir));
 			});
 		this.writePromise = new XPromise();
@@ -178,7 +189,6 @@ class Page {
 module.exports = Manga;
 
 // TODO
-// chapter order when offline
 // offline mode gets stuck
 // load offline first then bother with online
 // accept manga id urls
