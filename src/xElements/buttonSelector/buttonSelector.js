@@ -26,7 +26,7 @@ customElements.define(name, class extends XElement {
 			radio.type = 'radio';
 			radio.name = 'options';
 			radio.checked = !i;
-			radio.disabled = true;
+			radio.addEventListener('input', () => this.emit('select', i));
 			label.appendChild(radio);
 
 			let span = document.createElement('span');
@@ -36,9 +36,7 @@ customElements.define(name, class extends XElement {
 
 			let optionResolved = await option;
 			radio.value = optionResolved;
-			radio.addEventListener('input', () => this.emit('select', i));
 			span.textContent = optionResolved;
-			radio.disabled = false;
 		});
 	}
 
