@@ -16,6 +16,7 @@ class Task {
 
 	moveToFront() {
 		let i = this.parentQueue.indexOf(this);
+		if (i === -1) return; // Occurs when the task has already been completed
 		this.parentQueue.splice(i, 1);
 		this.parentQueue.unshift(this);
 	}

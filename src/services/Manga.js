@@ -40,10 +40,11 @@ class Manga {
 			.then(response => `${response.data.chapters[0].mangaTitle} ${this.language}`)
 			.catch(() => path.basename(this.mangaDir));
 		this.chaptersPromise = responsePromise
-			.then(response => response.data.chapters
-				.filter(chapter => chapter.language === this.language)
-				.reverse()
-				.map(chapter => new Chapter(chapter.id, this.mangaDir)))
+			.then(response =>
+				response.data.chapters
+					.filter(chapter => chapter.language === this.language)
+					.reverse()
+					.map(chapter => new Chapter(chapter.id, this.mangaDir)))
 			.catch(async () =>
 				(await fs.readdir(this.mangaDir, {withFileTypes: true}))
 					.filter(entry => entry.isDirectory())
@@ -194,7 +195,6 @@ class Page {
 module.exports = Manga;
 
 // TODO
-// offline mode gets stuck
 // load offline first then bother with online
 // accept manga id urls
 // button to restart downloads
