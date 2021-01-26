@@ -178,6 +178,10 @@ class Page {
 module.exports = Manga;
 
 // TODO
+// chapter order when offline
+// offline mode gets stuck
+// load offline first then bother with online
+// accept manga id urls
 // button to restart downloads
 // only bother for 1 chapter version per chapter (i.e. ignore multiple translations)
 // cache

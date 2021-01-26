@@ -7,6 +7,7 @@ const Manga = require('../../services/Manga');
 customElements.define(name, class extends XElement {
 	static get attributeTypes() {
 		return {
+			zoom: {type: XElement.PropertyTypes.number},
 			mangaPromise: {type: XElement.PropertyTypes.object},
 			chapter: {type: XElement.PropertyTypes.object, allowRedundantAssignment: true},
 			chapterIndex: {type: XElement.PropertyTypes.number, allowRedundantAssignment: true},
@@ -22,7 +23,7 @@ customElements.define(name, class extends XElement {
 
 		this.$('#chapter-selector').addEventListener('select', e =>
 			this.chapterIndex = e.detail);
-		this.$('#retry-chapter').addEventListener('click', async () => {
+		this.$('#retry').addEventListener('click', async () => {
 			let manga = await this.mangaPromise;
 			if (!manga) return;
 			let chapter = (await (manga).chaptersPromise)[this.chapterIndex];
@@ -30,10 +31,15 @@ customElements.define(name, class extends XElement {
 			chapter.write(path.resolve(Storage.dataDir, await manga.mangaTitlePromise));
 			this.chapterIndex = this.chapterIndex;
 		});
+		this.$('#zoom').addEventListener('input', () => this.zoom = this.$('#zoom').value);
 		this.$('#next').addEventListener('click', () => {
 			this.$('#chapter-selector').selectedIndex = ++this.chapterIndex;
 			this.$('#images-container').scrollIntoView();
 		});
+	}
+
+	set zoom(value) {
+		this.$('#images-container').style.zoom = this.zoom;
 	}
 
 	set mangaPromise(valuePromise) {

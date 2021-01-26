@@ -18,6 +18,15 @@
 		margin-top: 15px;
 	}
 
+	#zoom {
+		vertical-align: middle;
+	}
+
+	img {
+		display: block;
+		margin: auto;
+	}
+
 	img:empty {
 		min-width: 100px;
 		min-height: 100px;
@@ -27,7 +36,8 @@
 
 <x-button-selector id="chapter-selector"></x-button-selector>
 <div class="row">
-	<button id="retry-chapter">Retry chapter</button>
+	<button id="retry">Retry</button>
+	<input id="zoom" type="range" min=".5" max="3" value="1" step=".1">
 </div>
 <div id="images-container" class="row"></div>
 <div class="row">
