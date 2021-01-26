@@ -59,6 +59,7 @@ customElements.define(name, class extends XElement {
 	}
 
 	set chapter(value) {
+		if (!value) return; // can be undefined for mangas with 0 chapters
 		this.classList.remove('loaded-pages');
 		value.responseTask.moveToFront();
 		value.pagesPromise.then(pages => {

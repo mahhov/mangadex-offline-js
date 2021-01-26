@@ -55,6 +55,6 @@ customElements.define(name, class extends XElement {
 			this.$('#view').mangaPromise = mangaPromise;
 
 		mangaProgress.setMangaPromise(mangaPromise);
-		(await manga).write(Storage.dataDir);
+		(await mangaPromise).write(Storage.dataDir);
 	}
 });

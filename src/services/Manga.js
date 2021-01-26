@@ -32,22 +32,24 @@ class Manga {
 	constructor(id, language, mangaDir = '') {
 		this.id = id;
 		this.language = language;
+		this.mangaDir = mangaDir;
 
 		this.responseTask = get(this.endpoint, this);
 		let responsePromise = this.responseTask.promise.catch(() => null);
 		this.mangaTitlePromise = responsePromise
 			.then(response => `${response.data.chapters[0].mangaTitle} ${this.language}`)
-			.catch(() => path.basename(mangaDir));
+			.catch(() => path.basename(this.mangaDir));
 		this.chaptersPromise = responsePromise
 			.then(response => response.data.chapters
 				.filter(chapter => chapter.language === this.language)
 				.reverse()
-				.map(chapter => new Chapter(chapter.id, mangaDir)))
+				.map(chapter => new Chapter(chapter.id, this.mangaDir)))
 			.catch(async () =>
-				(await fs.readdir(mangaDir))
-					.filter(name => name !== 'data.json')
+				(await fs.readdir(this.mangaDir, {withFileTypes: true}))
+					.filter(entry => entry.isDirectory())
+					.map(entry => entry.name)
 					.sort(sortNames)
-					.map(name => new Chapter('', mangaDir, name)));
+					.map(name => new Chapter('', this.mangaDir, name)));
 		this.writePromise = new XPromise();
 	}
 
@@ -98,6 +100,8 @@ class Chapter {
 
 	init(id, mangaDir = '', chapterTitle = '') {
 		this.id = id;
+		this.mangaDir = mangaDir;
+		this.chapterTitle = chapterTitle;
 		let wasAborted = this.aborted;
 		this.aborted = false;
 
@@ -105,16 +109,16 @@ class Chapter {
 		let responsePromise = this.responseTask.promise.catch(() => null);
 		this.chapterTitlePromise = responsePromise
 			.then(response => `${response.data.volume || '_'} ${response.data.chapter || '_'}`)
-			.catch(() => chapterTitle);
+			.catch(() => this.chapterTitle);
 		this.pagesPromise = responsePromise
 			.then(async response => {
-				let chapterDir = path.resolve(mangaDir, await this.chapterTitlePromise);
+				let chapterDir = path.resolve(this.mangaDir, await this.chapterTitlePromise);
 				return response.data.pages.map(pageId =>
 					new Page(response.data.server, response.data.hash, pageId, chapterDir));
 			})
 			.catch(async () => {
-				let chapterDir = path.resolve(mangaDir, await this.chapterTitlePromise);
-				return (await fs.readdir(path.resolve(mangaDir, chapterTitle)))
+				let chapterDir = path.resolve(this.mangaDir, await this.chapterTitlePromise);
+				return (await fs.readdir(path.resolve(this.mangaDir, this.chapterTitle)))
 					.sort(sortNames)
 					.map(name => new Page('', '', name, chapterDir));
 			});
@@ -123,7 +127,7 @@ class Chapter {
 
 	async retry() {
 		await this.abort();
-		this.init(this.id);
+		this.init(this.id, this.mangaDir, this.chapterTitle);
 	}
 
 	async write(mangaDir) {
@@ -152,9 +156,10 @@ class Page {
 		this.server = server;
 		this.hash = hash;
 		this.id = id;
+		this.chapterDir = chapterDir;
 
 		this.writePromise = new XPromise();
-		this.imagePromise = fs.readFile(path.resolve(chapterDir, this.id))
+		this.imagePromise = fs.readFile(path.resolve(this.chapterDir, this.id))
 			.then(buffer => {
 				this.writePromise.resolve();
 				return buffer;
