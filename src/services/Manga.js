@@ -4,8 +4,8 @@ const axios = require('axios');
 const RateLimitedRetryQueue = require('./RateLimitedRetryQueue');
 const XPromise = require('./XPromise');
 
-let getQueueChapters = new RateLimitedRetryQueue(100, undefined, 10);
-let getQueuePages = new RateLimitedRetryQueue(100, undefined, 10);
+let getQueueChapters = new RateLimitedRetryQueue(10, undefined, 10);
+let getQueuePages = new RateLimitedRetryQueue(10, undefined, 10);
 let get = (endpoint, abortObj = {}, options = undefined, queue = getQueueChapters, highPriority = false) => {
 	let handler = () =>
 		abortObj.aborted ?
@@ -17,14 +17,15 @@ let get = (endpoint, abortObj = {}, options = undefined, queue = getQueueChapter
 
 let writeQueue = new RateLimitedRetryQueue(100, undefined, 10);
 let write = (path, data) =>
-	writeQueue.add(() => fs.writeFile(path, data));
+	writeQueue.add(() => fs.writeFile(path, data)).promise;
 
 class Manga {
 	constructor(id, language, mangaDir = '') {
 		this.id = id;
 		this.language = language;
 
-		let responsePromise = get(this.endpoint, this).catch(() => null);
+		this.responseTask = get(this.endpoint, this);
+		let responsePromise = this.responseTask.promise.catch(() => null);
 		this.mangaTitlePromise = responsePromise
 			.then(response => `${response.data.chapters[0].mangaTitle} ${this.language}`)
 			.catch(() => path.basename(mangaDir));
@@ -42,7 +43,7 @@ class Manga {
 
 	static fromSampleChapterEndpoint(sampleChapterEndpoint) {
 		let chapterId = sampleChapterEndpoint.match(/chapter\/(\d+)/i)?.[1];
-		return get(Chapter.endpoint(chapterId, this))
+		return get(Chapter.endpoint(chapterId, this)).promise
 			.then(response => new Manga(response.data.mangaId, response.data.language))
 			.catch(() => null);
 	}
@@ -90,7 +91,8 @@ class Chapter {
 		let wasAborted = this.aborted;
 		this.aborted = false;
 
-		let responsePromise = get(this.endpoint, this, undefined, undefined, wasAborted).catch(() => null);
+		this.responseTask = get(this.endpoint, this, undefined, undefined, wasAborted);
+		let responsePromise = this.responseTask.promise.catch(() => null);
 		this.chapterTitlePromise = responsePromise
 			.then(response => `${response.data.volume || '_'} ${response.data.chapter || '_'}`)
 			.catch(() => chapterTitle);
@@ -147,7 +149,7 @@ class Page {
 				return buffer;
 			})
 			.catch(async () =>
-				Buffer.from(await get(this.endpoint, this, {responseType: 'arraybuffer'}, getQueuePages)))
+				Buffer.from(await get(this.endpoint, this, {responseType: 'arraybuffer'}, getQueuePages).promise))
 			.catch(() => null);
 	}
 
@@ -176,7 +178,6 @@ class Page {
 module.exports = Manga;
 
 // TODO
-// allow manual loading of chapters
 // button to restart downloads
 // only bother for 1 chapter version per chapter (i.e. ignore multiple translations)
 // cache

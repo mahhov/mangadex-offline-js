@@ -57,11 +57,11 @@ customElements.define(name, class extends XElement {
 		this.$('#progress-bar').secondary = this.pageWritesCount / this.pagesCount;
 	}
 
-	async setManga(manga) {
+	async setMangaPromise(mangaPromise) {
 		// should only be invoked once
-		this.manga = manga;
+		let manga = await mangaPromise
 
-		this.title = await this.manga.mangaTitlePromise;
+		this.title = await manga.mangaTitlePromise;
 		this.chaptersCount = 0;
 		this.requestsCount = 0;
 		this.requestReadsCount = 0;
@@ -70,7 +70,7 @@ customElements.define(name, class extends XElement {
 		this.pagesPerChapter = new Average();
 
 		this.requestsCount = 1;
-		let chapters = await this.manga.chaptersPromise;
+		let chapters = await manga.chaptersPromise;
 		this.chaptersCount += chapters.length;
 		this.requestsCount = 1 + chapters.length;
 		this.requestReadsCount += 1;

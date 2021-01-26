@@ -13,45 +13,48 @@ customElements.define(name, class extends XElement {
 	}
 
 	async connectedCallback() {
-		this.mangas = [];
+		this.mangaPromises = [];
 
 		this.$('#add-input').addEventListener('keydown', ({key}) => {
 			if (key === 'Enter')
-				this.addInputedManga();
+				this.addInputtedManga();
 		});
 
 		this.$('#add-button').addEventListener('click', () =>
-			this.addInputedManga());
+			this.addInputtedManga());
 
 		(await Storage.writtenMangas).forEach(manga => manga
-			.then(manga => this.addManga(manga))
+			.then(manga => this.addMangaPromise(Promise.resolve(manga)))
 			.catch(() => 0));
 	}
 
-	addInputedManga() {
+	addInputtedManga() {
 		let chapterEndpoint = this.$('#add-input').value;
 		let mangaPromise = Manga.fromSampleChapterEndpoint(chapterEndpoint);
-		this.addManga(mangaPromise, chapterEndpoint);
+		this.addMangaPromise(mangaPromise, chapterEndpoint);
 	}
 
-	async addManga(mangaPromise, tempTitle = '') {
+	async addMangaPromise(mangaPromise, tempTitle = '') {
+		this.mangaPromises.push(mangaPromise);
+
 		let mangaProgress = document.createElement('x-manga-progress');
 		mangaProgress.title = tempTitle;
-		mangaProgress.addEventListener('view', async () => {
-			this.$('#view').manga = await mangaPromise;
+		mangaProgress.addEventListener('view', () => {
+			this.$('#view').mangaPromise = mangaPromise;
 			[...this.$('#list').children].forEach(mangaProgressI =>
 				mangaProgressI.selected = mangaProgressI === mangaProgress)
 		});
 		mangaProgress.addEventListener('remove', async () => {
 			if (mangaProgress.selected)
-				this.$('#view').manga = null;
+				this.$('#view').mangaPromise = this.mangaPromises[0];
 			await (await mangaPromise).removeWritten(Storage.dataDir);
 			mangaProgress.remove();
 		});
 		this.$('#list').appendChild(mangaProgress);
+		if (this.$('#list').children.length === 1)
+			this.$('#view').mangaPromise = mangaPromise;
 
-		let manga = await mangaPromise;
-		manga.write(Storage.dataDir);
-		mangaProgress.setManga(manga);
+		mangaProgress.setMangaPromise(mangaPromise);
+		(await manga).write(Storage.dataDir);
 	}
 });

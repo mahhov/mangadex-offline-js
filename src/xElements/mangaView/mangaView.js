@@ -7,7 +7,7 @@ const Manga = require('../../services/Manga');
 customElements.define(name, class extends XElement {
 	static get attributeTypes() {
 		return {
-			manga: {type: XElement.PropertyTypes.object},
+			mangaPromise: {type: XElement.PropertyTypes.object},
 			chapter: {type: XElement.PropertyTypes.object, allowRedundantAssignment: true},
 			chapterIndex: {type: XElement.PropertyTypes.number, allowRedundantAssignment: true},
 		};
@@ -18,15 +18,16 @@ customElements.define(name, class extends XElement {
 	}
 
 	async connectedCallback() {
-		this.manga = null;
+		this.mangaPromise = Promise.resolve(null);
 
 		this.$('#chapter-selector').addEventListener('select', e =>
 			this.chapterIndex = e.detail);
 		this.$('#retry-chapter').addEventListener('click', async () => {
-			if (!this.manga) return;
-			let chapter = (await this.manga.chaptersPromise)[this.chapterIndex];
+			let manga = await this.mangaPromise;
+			if (!manga) return;
+			let chapter = (await (manga).chaptersPromise)[this.chapterIndex];
 			await chapter.retry();
-			chapter.write(path.resolve(Storage.dataDir, await this.manga.mangaTitlePromise));
+			chapter.write(path.resolve(Storage.dataDir, await manga.mangaTitlePromise));
 			this.chapterIndex = this.chapterIndex;
 		});
 		this.$('#next').addEventListener('click', () => {
@@ -35,19 +36,23 @@ customElements.define(name, class extends XElement {
 		});
 	}
 
-	set manga(value) {
+	set mangaPromise(valuePromise) {
 		this.classList.remove('loaded-chapters');
-		if (!value) return;
-		value.chaptersPromise.then(chapters => {
-			if (value !== this.manga) return;
-			this.classList.add('loaded-chapters');
-			this.$('#chapter-selector').options = chapters.map(chapter => chapter.chapterTitlePromise);
-			this.chapterIndex = 0;
-		});
+		valuePromise.then(value => {
+			if (!value) return;
+			value.responseTask.moveToFront();
+			value.chaptersPromise.then(chapters => {
+				if (valuePromise !== this.mangaPromise) return;
+				this.classList.add('loaded-chapters');
+				this.$('#chapter-selector').options = chapters.map(chapter => chapter.chapterTitlePromise);
+				this.chapterIndex = 0;
+			});
+		})
 	}
 
 	set chapter(value) {
 		this.classList.remove('loaded-pages');
+		value.responseTask.moveToFront();
 		value.pagesPromise.then(pages => {
 			if (value !== this.chapter) return;
 			this.classList.add('loaded-pages');
@@ -61,9 +66,10 @@ customElements.define(name, class extends XElement {
 	}
 
 	set chapterIndex(value) {
-		this.manga?.chaptersPromise?.then(chapters => {
-			if (value !== this.chapterIndex) return;
-			this.chapter = chapters[value];
-		});
+		this.mangaPromise.then(async manga =>
+			manga?.chaptersPromise?.then(chapters => {
+				if (value !== this.chapterIndex) return;
+				this.chapter = chapters[value];
+			}));
 	}
 });
