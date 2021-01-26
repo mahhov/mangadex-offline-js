@@ -19,6 +19,7 @@ customElements.define(name, class extends XElement {
 	}
 
 	async connectedCallback() {
+		this.zoom = 1;
 		this.mangaPromise = Promise.resolve(null);
 
 		this.$('#chapter-selector').addEventListener('select', e =>
@@ -39,7 +40,8 @@ customElements.define(name, class extends XElement {
 	}
 
 	set zoom(value) {
-		this.$('#images-container').style.zoom = this.zoom;
+		this.$('#zoom-label').textContent = `x${value}`;
+		this.$('#images-container').style.zoom = value;
 	}
 
 	set mangaPromise(valuePromise) {
