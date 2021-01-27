@@ -7,8 +7,7 @@ class XMultiPromise {
 		this.resolved = false;
 		this.rejected = false;
 		this.done = false;
-		this.resolvedObj = null;
-		this.rejectedObj = null;
+		this.obj = null;
 
 		promise?.then(obj => this.resolve(obj));
 		promise?.catch(obj => this.reject(obj));
@@ -17,18 +16,24 @@ class XMultiPromise {
 	then(handler) {
 		let promise = new XMultiPromise();
 		this.thens.push([handler, promise]);
+		if (this.resolved)
+			XMultiPromise.invokeHandler(handler, promise, this.obj);
 		return promise;
 	}
 
 	catch(handler) {
 		let nextPromise = new XMultiPromise();
 		this.catches.push([handler, nextPromise]);
+		if (this.rejected)
+			XMultiPromise.invokeHandler(handler, promise, this.obj);
 		return nextPromise;
 	}
 
 	finaly(handler) {
 		let nextPromise = new XMultiPromise();
 		this.finalies.push([handler, nextPromise]);
+		if (this.done)
+			XMultiPromise.invokeHandler(handler, promise, this.obj);
 		return nextPromise;
 	}
 
@@ -37,9 +42,9 @@ class XMultiPromise {
 		this.resolved = true;
 		this.rejected = false;
 		this.done = true;
-		this.resolvedObj = obj;
-		this.invokeHandlers(this.thens, obj);
-		this.invokeHandlers(this.finalies, obj);
+		this.obj = obj;
+		XMultiPromise.invokeHandlers(this.thens, obj);
+		XMultiPromise.invokeHandlers(this.finalies, obj);
 	}
 
 	reject(obj, onlyIfFirst = false) {
@@ -47,15 +52,18 @@ class XMultiPromise {
 		this.resolved = false;
 		this.rejected = true;
 		this.done = true;
-		this.rejectedObj = obj;
-		this.invokeHandlers(this.catches, obj);
-		this.invokeHandlers(this.finalies, obj);
+		this.obj = obj;
+		XMultiPromise.invokeHandlers(this.catches, obj);
+		XMultiPromise.invokeHandlers(this.finalies, obj);
 	}
 
-	invokeHandlers(handlers, obj) {
-		handlers.forEach(([handler, nextPromise]) =>
-			nextPromise.resolve(handler(obj)));
+	static invokeHandlers(handlerPairs, obj) {
+		handlerPairs.forEach(([handler, nextPromise]) =>
+			XMultiPromise.invokeHandler(handler, nextPromise, obj));
+	}
 
+	static async invokeHandler(handler, nextPromise, obj) {
+		nextPromise.resolve(handler(await obj));
 	}
 }
 
