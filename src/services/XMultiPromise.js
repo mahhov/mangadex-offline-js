@@ -2,7 +2,7 @@ class XMultiPromise {
 	constructor(promise = undefined) {
 		this.thens = [];
 		this.catches = [];
-		this.finalies = [];
+		this.finallies = [];
 
 		this.resolved = false;
 		this.rejected = false;
@@ -14,11 +14,11 @@ class XMultiPromise {
 	}
 
 	then(handler) {
-		let promise = new XMultiPromise();
-		this.thens.push([handler, promise]);
+		let nextPromise = new XMultiPromise();
+		this.thens.push([handler, nextPromise]);
 		if (this.resolved)
-			XMultiPromise.invokeHandler(handler, promise, this.obj);
-		return promise;
+			XMultiPromise.invokeHandler(handler, nextPromise, this.obj);
+		return nextPromise;
 	}
 
 	catch(handler) {
@@ -29,9 +29,9 @@ class XMultiPromise {
 		return nextPromise;
 	}
 
-	finaly(handler) {
+	finally(handler) {
 		let nextPromise = new XMultiPromise();
-		this.finalies.push([handler, nextPromise]);
+		this.finallies.push([handler, nextPromise]);
 		if (this.done)
 			XMultiPromise.invokeHandler(handler, promise, this.obj);
 		return nextPromise;
@@ -44,7 +44,7 @@ class XMultiPromise {
 		this.done = true;
 		this.obj = obj;
 		XMultiPromise.invokeHandlers(this.thens, obj);
-		XMultiPromise.invokeHandlers(this.finalies, obj);
+		XMultiPromise.invokeHandlers(this.finallies, obj);
 	}
 
 	reject(obj, onlyIfFirst = false) {
@@ -54,7 +54,7 @@ class XMultiPromise {
 		this.done = true;
 		this.obj = obj;
 		XMultiPromise.invokeHandlers(this.catches, obj);
-		XMultiPromise.invokeHandlers(this.finalies, obj);
+		XMultiPromise.invokeHandlers(this.finallies, obj);
 	}
 
 	static invokeHandlers(handlerPairs, obj) {
