@@ -30,7 +30,7 @@ customElements.define(name, class extends XElement {
 
 	addInputtedManga() {
 		let chapterEndpoint = this.$('#add-input').value;
-		let mangaPromise = Manga.fromSampleChapterEndpoint(chapterEndpoint);
+		let mangaPromise = Manga.fromSampleEndpoint(chapterEndpoint, Storage.dataDir);
 		this.addMangaPromise(mangaPromise, chapterEndpoint);
 	}
 
@@ -55,6 +55,5 @@ customElements.define(name, class extends XElement {
 			this.$('#view').mangaPromise = mangaPromise;
 
 		mangaProgress.setMangaPromise(mangaPromise);
-		(await mangaPromise).write(Storage.dataDir);
 	}
 });

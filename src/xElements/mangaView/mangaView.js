@@ -29,7 +29,6 @@ customElements.define(name, class extends XElement {
 			if (!manga) return;
 			let chapter = (await (manga).chaptersPromise)[this.chapterIndex];
 			await chapter.retry();
-			chapter.write(path.resolve(Storage.dataDir, await manga.mangaTitlePromise));
 			this.chapterIndex = this.chapterIndex;
 		});
 		this.$('#zoom').addEventListener('input', () => this.zoom = this.$('#zoom').value);
@@ -48,7 +47,7 @@ customElements.define(name, class extends XElement {
 		this.classList.remove('loaded-chapters');
 		valuePromise.then(value => {
 			if (!value) return;
-			value.responseTask.moveToFront();
+			value.setHighPriority();
 			value.chaptersPromise.then(chapters => {
 				if (valuePromise !== this.mangaPromise) return;
 				this.classList.add('loaded-chapters');
@@ -61,7 +60,7 @@ customElements.define(name, class extends XElement {
 	set chapter(value) {
 		if (!value) return; // can be undefined for mangas with 0 chapters
 		this.classList.remove('loaded-pages');
-		value.responseTask.moveToFront();
+		value.setHighPriority();
 		value.pagesPromise.then(pages => {
 			if (value !== this.chapter) return;
 			this.classList.add('loaded-pages');

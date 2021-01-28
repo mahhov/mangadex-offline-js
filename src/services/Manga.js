@@ -3,6 +3,7 @@ const path = require('path');
 const axios = require('axios');
 const RateLimitedRetryQueue = require('./RateLimitedRetryQueue');
 const XPromise = require('./XPromise');
+const XMultiPromise = require('./XMultiPromise');
 
 let getQueueChapters = new RateLimitedRetryQueue(10, undefined, 10);
 let getQueuePages = new RateLimitedRetryQueue(10, undefined, 10);
@@ -25,39 +26,60 @@ let sortNames = (name1, name2) => {
 };
 
 let writeQueue = new RateLimitedRetryQueue(100, undefined, 10);
-let write = (path, data) =>
-	writeQueue.add(() => fs.writeFile(path, data)).promise;
+let write = async (writePath, data) => {
+	await fs.mkdir(path.dirname(await writePath), {recursive: true});
+	return writeQueue.add(() => fs.writeFile(writePath, data)).promise;
+}
+
+let readDir = async (readPath, dirs = false) =>
+	(await fs.readdir(readPath, {withFileTypes: true}))
+		.filter(entry => dirs ? entry.isDirectory() : entry.isFile())
+		.map(entry => entry.name)
+		.sort(sortNames);
 
 class Manga {
-	constructor(id, language, mangaDir = '') {
+	constructor(id, language, mangaTitle, parentDir) {
 		this.id = id;
 		this.language = language;
-		this.mangaDir = mangaDir;
+		// mangaTitle not persisted because chapterTitlePromise should be used outside of initFromWritten()
+		this.parentDir = parentDir;
 
-		this.responseTask = get(this.endpoint, this);
-		let responsePromise = this.responseTask.promise.catch(() => null);
-		this.mangaTitlePromise = responsePromise
-			.then(response => `${response.data.chapters[0].mangaTitle} ${this.language}`)
-			.catch(() => path.basename(this.mangaDir));
-		this.chaptersPromise = responsePromise
-			.then(response =>
-				response.data.chapters
-					.filter(chapter => chapter.language === this.language)
-					.reverse()
-					.map(chapter => new Chapter(chapter.id, this.mangaDir)))
-			.catch(async () =>
-				(await fs.readdir(this.mangaDir, {withFileTypes: true}))
-					.filter(entry => entry.isDirectory())
-					.map(entry => entry.name)
-					.sort(sortNames)
-					.map(name => new Chapter('', this.mangaDir, name)));
-		this.writePromise = new XPromise();
+		this.mangaTitlePromise = new XMultiPromise();
+		this.chaptersPromise = new XMultiPromise();
+		Promise.any([this.initFromWritten(mangaTitle), this.initFromGet()]).catch(e => {
+			if (this.mangaTitlePromise.rejected)
+				this.mangaTitlePromise.resolve('');
+			if (this.chaptersPromise.rejected)
+				this.chaptersPromise.resolve([]);
+			return Promise.reject(e);
+		});
 	}
 
-	static fromSampleChapterEndpoint(sampleChapterEndpoint) {
+	async initFromWritten(mangaTitle) {
+		this.mangaTitlePromise.resolve(mangaTitle, true);
+		let mangaDir = await this.mangaDirPromise;
+		this.chaptersPromise.resolve((await readDir(mangaDir, true))
+			.map(name => new Chapter('', name, mangaDir)), true);
+	}
+
+	async initFromGet() {
+		this.responseTask = get(await this.endpoint, this);
+		let response = await this.responseTask.promise;
+		this.mangaTitlePromise.resolve(`${response.data.chapters[0].mangaTitle} ${this.language}`);
+		let mangaDir = await this.mangaDirPromise;
+		this.chaptersPromise.resolve(response.data.chapters
+			.filter(chapter => chapter.language === this.language)
+			.reverse()
+			.map(chapter => new Chapter(chapter.id, '', mangaDir)));
+
+		write(path.resolve(mangaDir, 'data.json'),
+			JSON.stringify({id: this.id, language: this.language}))
+	}
+
+	static async fromSampleChapterEndpoint(sampleChapterEndpoint, parentDir) {
 		let chapterId = sampleChapterEndpoint.match(/chapter\/(\d+)/i)?.[1];
-		return get(Chapter.endpoint(chapterId, this)).promise
-			.then(response => new Manga(response.data.mangaId, response.data.language))
+		return get(await Chapter.endpoint(chapterId)).promise
+			.then(response => new Manga(response.data.mangaId, response.data.language, '', parentDir))
 			.catch(() => null);
 	}
 
@@ -65,77 +87,80 @@ class Manga {
 		let mangaDir = path.resolve(parentDir, title);
 		return fs.readFile(path.resolve(mangaDir, 'data.json')).then(file => {
 			let {id, language} = JSON.parse(file);
-			return new Manga(id, language, mangaDir);
+			return new Manga(id, language, title, parentDir);
 		});
 	}
 
-	async write(parentDir) {
-		let mangaDir = path.resolve(parentDir, await this.mangaTitlePromise);
-		await Promise.all([
-			write(path.resolve(mangaDir, 'data.json'), JSON.stringify({id: this.id, language: this.language})),
-			...(await this.chaptersPromise).map(chapter => chapter.write(mangaDir)),
-		]);
-		this.writePromise.resolve();
+	async removeWritten() {
+		await this.abort();
+		await fs.rmdir(await this.mangaDirPromise, {recursive: true});
 	}
 
-	async removeWritten(parentDir) {
-		await this.abort();
-		let mangaDir = path.resolve(parentDir, await this.mangaTitlePromise);
-		await fs.rmdir(mangaDir, {recursive: true});
+	setHighPriority() {
+		this.responseTask.moveToFront();
 	}
 
 	async abort() {
 		this.aborted = true;
-		(await this.chaptersPromise).forEach(chapter => chapter.abort());
+		await Promise.all((await this.chaptersPromise).map(chapter => chapter.abort()));
 	}
 
 	get endpoint() {
-		return `https://mangadex.org/api/v2/manga/${this.id}/chapters`
+		return this.id ?
+			`https://mangadex.org/api/v2/manga/${this.id}/chapters` :
+			Promise.reject('Failed to form manga endpoint; missing manga id.');
+	}
+
+	get mangaDirPromise() {
+		return this.mangaTitlePromise.then(mangaTitle =>
+			this.parentDir && mangaTitle ?
+				path.resolve(this.parentDir, mangaTitle) :
+				Promise.reject('Failed to form manga dir; missing parent dir or manga title.'));
 	}
 }
 
 class Chapter {
-	constructor(id, mangaDir = '', chapterTitle = '') {
-		this.init(id, mangaDir, chapterTitle);
+	constructor(id, chapterTitle, mangaDir) {
+		this.id = id; // optional
+		// chapterTitle not persisted because chapterTitlePromise should be used outside of initFromWritten()
+		this.mangaDir = mangaDir;
+
+		this.chapterTitlePromise = new XMultiPromise();
+		this.pagesPromise = new XMultiPromise();
+		Promise.any([this.initFromWritten(chapterTitle), this.initFromGet()]).catch(e => {
+			if (this.chapterTitlePromise.rejected)
+				this.chapterTitlePromise.resolve('');
+			if (this.pagesPromise.rejected)
+				this.pagesPromise.resolve([]);
+			return Promise.reject(e);
+		});
 	}
 
-	init(id, mangaDir = '', chapterTitle = '') {
-		this.id = id;
-		this.mangaDir = mangaDir;
-		this.chapterTitle = chapterTitle;
-		let wasAborted = this.aborted;
-		this.aborted = false;
+	async initFromWritten(chapterTitle) {
+		this.chapterTitlePromise.resolve(chapterTitle, true);
+		let chapterDir = await this.chapterDirPromise;
+		this.pagesPromise.resolve((await readDir(chapterDir))
+			.map(name => new Page('', '', name, chapterDir)), true);
+	}
 
-		this.responseTask = get(this.endpoint, this, undefined, undefined, wasAborted);
-		let responsePromise = this.responseTask.promise.catch(() => null);
-		this.chapterTitlePromise = responsePromise
-			.then(response => `${response.data.volume || '_'} ${response.data.chapter || '_'}`)
-			.catch(() => this.chapterTitle);
-		this.pagesPromise = responsePromise
-			.then(async response => {
-				let chapterDir = path.resolve(this.mangaDir, await this.chapterTitlePromise);
-				return response.data.pages.map(pageId =>
-					new Page(response.data.server, response.data.hash, pageId, chapterDir));
-			})
-			.catch(async () => {
-				let chapterDir = path.resolve(this.mangaDir, await this.chapterTitlePromise);
-				return (await fs.readdir(path.resolve(this.mangaDir, this.chapterTitle)))
-					.sort(sortNames)
-					.map(name => new Page('', '', name, chapterDir));
-			});
-		this.writePromise = new XPromise();
+	async initFromGet(retry = false) {
+		this.responseTask = get(await this.endpoint, this, undefined, undefined, retry);
+		let response = await this.responseTask.promise;
+		this.chapterTitlePromise.resolve(`${response.data.volume || '_'} ${response.data.chapter || '_'}`);
+		let chapterDir = await this.chapterDirPromise;
+		this.pagesPromise.resolve(response.data.pages.map(pageId =>
+			new Page(response.data.server, response.data.hash, pageId, chapterDir, retry)));
 	}
 
 	async retry() {
 		await this.abort();
-		this.init(this.id, this.mangaDir, this.chapterTitle);
+		this.aborted = false;
+		await this.initFromGet(true);
 	}
 
-	async write(mangaDir) {
-		let chapterDir = path.resolve(mangaDir, await this.chapterTitlePromise);
-		await fs.mkdir(chapterDir, {recursive: true});
-		await Promise.all((await this.pagesPromise).map(page => page.write(chapterDir)));
-		this.writePromise.resolve();
+	setHighPriority() {
+		// responseTask can be undefined if chapter was constructed without an id
+		this.responseTask?.moveToFront();
 	}
 
 	async abort() {
@@ -148,32 +173,46 @@ class Chapter {
 	}
 
 	static endpoint(id) {
-		return `https://mangadex.org/api/v2/chapter/${id}`;
+		return id ?
+			`https://mangadex.org/api/v2/chapter/${id}` :
+			Promise.reject('Failed to form chapter endpoint; missing chapter id.');
+	}
+
+	get chapterDirPromise() {
+		return this.chapterTitlePromise.then(chapterTitle =>
+			this.mangaDir && chapterTitle ?
+				path.resolve(this.mangaDir, chapterTitle) :
+				Promise.reject('Failed to form chapter dir; missing manga dir or chapter title.'));
 	}
 }
 
 class Page {
-	constructor(server, hash, id, chapterDir = '') {
-		this.server = server;
-		this.hash = hash;
+	constructor(server, hash, id, chapterDir, ignoreWritten = false) {
+		this.server = server; // optional
+		this.hash = hash; // optional
 		this.id = id;
 		this.chapterDir = chapterDir;
 
+		this.imagePromise = new XPromise();
 		this.writePromise = new XPromise();
-		this.imagePromise = fs.readFile(path.resolve(this.chapterDir, this.id))
-			.then(buffer => {
-				this.writePromise.resolve();
-				return buffer;
-			})
-			.catch(async () =>
-				Buffer.from(await get(this.endpoint, this, {responseType: 'arraybuffer'}, getQueuePages).promise))
-			.catch(() => null);
+		(ignoreWritten ? Promise.reject() : this.initFromWritten())
+			.catch(e => this.initFromGet()
+				.catch(e2 => {
+					this.imagePromise.resolve();
+					this.writePromise.resolve();
+					return Promise.reject([e, e2])
+				}));
 	}
 
-	async write(chapterDir) {
-		await this.imagePromise;
-		if (this.writePromise.resolved) return;
-		await write(path.resolve(chapterDir, this.id), await this.imagePromise);
+	async initFromWritten() {
+		this.imagePromise.resolve(await fs.readFile(await this.pagePath));
+		this.writePromise.resolve();
+	}
+
+	async initFromGet() {
+		let buffer = Buffer.from(await get(await this.endpoint, this, {responseType: 'arraybuffer'}, getQueuePages).promise);
+		this.imagePromise.resolve(buffer);
+		await write(await this.pagePath, buffer);
 		this.writePromise.resolve();
 	}
 
@@ -182,7 +221,15 @@ class Page {
 	}
 
 	get endpoint() {
-		return `${this.server}${this.hash}/${this.id}`;
+		return this.server && this.hash && this.id ?
+			`${this.server}${this.hash}/${this.id}` :
+			Promise.reject('Failed to form page endpoint; missing page server, hash, or id.');
+	}
+
+	get pagePath() {
+		return this.id && this.chapterDir ?
+			path.resolve(this.chapterDir, this.id) :
+			Promise.reject('Failed to form page path; missing page id or chapter dir.');
 	}
 
 	get imageSrc() {
