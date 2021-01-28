@@ -46,16 +46,17 @@ class Manga {
 
 		this.mangaTitlePromise = new XMultiPromise();
 		this.chaptersPromise = new XMultiPromise();
-		Promise.any([this.initFromWritten(mangaTitle), this.initFromGet()]).catch(e => {
+		Promise.allSettled([this.initFromWritten(mangaTitle), this.initFromGet()]).then(() => {
 			if (this.mangaTitlePromise.rejected)
 				this.mangaTitlePromise.resolve('');
 			if (this.chaptersPromise.rejected)
 				this.chaptersPromise.resolve([]);
-			return Promise.reject(e);
 		});
 	}
 
 	async initFromWritten(mangaTitle) {
+		if (!this.id || !this.language || !mangaTitle || !this.parentDir)
+			return;
 		this.mangaTitlePromise.resolve(mangaTitle, true);
 		let mangaDir = await this.mangaDirPromise;
 		this.chaptersPromise.resolve((await readDir(mangaDir, true))
@@ -63,7 +64,9 @@ class Manga {
 	}
 
 	async initFromGet() {
-		this.responseTask = get(await this.endpoint, this);
+		if (!this.id || !this.language || !this.parentDir)
+			return;
+		this.responseTask = get(this.endpoint, this);
 		let response = await this.responseTask.promise;
 		this.mangaTitlePromise.resolve(`${response.data.chapters[0].mangaTitle} ${this.language}`);
 		let mangaDir = await this.mangaDirPromise;
@@ -78,7 +81,7 @@ class Manga {
 
 	static async fromSampleChapterEndpoint(sampleChapterEndpoint, parentDir) {
 		let chapterId = sampleChapterEndpoint.match(/chapter\/(\d+)/i)?.[1];
-		return get(await Chapter.endpoint(chapterId)).promise
+		return get(Chapter.endpoint(chapterId)).promise
 			.then(response => new Manga(response.data.mangaId, response.data.language, '', parentDir))
 			.catch(() => null);
 	}
@@ -106,37 +109,34 @@ class Manga {
 	}
 
 	get endpoint() {
-		return this.id ?
-			`https://mangadex.org/api/v2/manga/${this.id}/chapters` :
-			Promise.reject('Failed to form manga endpoint; missing manga id.');
+		return `https://mangadex.org/api/v2/manga/${this.id}/chapters`;
 	}
 
 	get mangaDirPromise() {
 		return this.mangaTitlePromise.then(mangaTitle =>
-			this.parentDir && mangaTitle ?
-				path.resolve(this.parentDir, mangaTitle) :
-				Promise.reject('Failed to form manga dir; missing parent dir or manga title.'));
+			path.resolve(this.parentDir, mangaTitle));
 	}
 }
 
 class Chapter {
 	constructor(id, chapterTitle, mangaDir) {
 		this.id = id; // optional
-		// chapterTitle not persisted because chapterTitlePromise should be used outside of initFromWritten()
+		// chapterTitle (optional) not persisted because chapterTitlePromise should be used outside of initFromWritten()
 		this.mangaDir = mangaDir;
 
 		this.chapterTitlePromise = new XMultiPromise();
 		this.pagesPromise = new XMultiPromise();
-		Promise.any([this.initFromWritten(chapterTitle), this.initFromGet()]).catch(e => {
+		Promise.allSettled([this.initFromWritten(chapterTitle), this.initFromGet()]).then(() => {
 			if (this.chapterTitlePromise.rejected)
 				this.chapterTitlePromise.resolve('');
 			if (this.pagesPromise.rejected)
 				this.pagesPromise.resolve([]);
-			return Promise.reject(e);
 		});
 	}
 
 	async initFromWritten(chapterTitle) {
+		if (!chapterTitle || !this.mangaDir)
+			return;
 		this.chapterTitlePromise.resolve(chapterTitle, true);
 		let chapterDir = await this.chapterDirPromise;
 		this.pagesPromise.resolve((await readDir(chapterDir))
@@ -144,7 +144,9 @@ class Chapter {
 	}
 
 	async initFromGet(retry = false) {
-		this.responseTask = get(await this.endpoint, this, undefined, undefined, retry);
+		if (!this.id || !this.mangaDir)
+			return;
+		this.responseTask = get(this.endpoint, this, undefined, undefined, retry);
 		let response = await this.responseTask.promise;
 		this.chapterTitlePromise.resolve(`${response.data.volume || '_'} ${response.data.chapter || '_'}`);
 		let chapterDir = await this.chapterDirPromise;
@@ -173,16 +175,12 @@ class Chapter {
 	}
 
 	static endpoint(id) {
-		return id ?
-			`https://mangadex.org/api/v2/chapter/${id}` :
-			Promise.reject('Failed to form chapter endpoint; missing chapter id.');
+		return `https://mangadex.org/api/v2/chapter/${id}`;
 	}
 
 	get chapterDirPromise() {
 		return this.chapterTitlePromise.then(chapterTitle =>
-			this.mangaDir && chapterTitle ?
-				path.resolve(this.mangaDir, chapterTitle) :
-				Promise.reject('Failed to form chapter dir; missing manga dir or chapter title.'));
+			path.resolve(this.mangaDir, chapterTitle));
 	}
 }
 
@@ -192,27 +190,32 @@ class Page {
 		this.hash = hash; // optional
 		this.id = id;
 		this.chapterDir = chapterDir;
+		this.ignoreWritten = ignoreWritten;
 
 		this.imagePromise = new XPromise();
 		this.writePromise = new XPromise();
-		(ignoreWritten ? Promise.reject() : this.initFromWritten())
-			.catch(e => this.initFromGet()
-				.catch(e2 => {
-					this.imagePromise.resolve();
-					this.writePromise.resolve();
-					return Promise.reject([e, e2])
-				}));
+		this.initFromWritten()
+			.catch(() => this.initFromGet())
+			.catch(() => {
+				this.imagePromise.resolve();
+				this.writePromise.resolve();
+				// console.error('Failed to initialize page', this);
+			});
 	}
 
 	async initFromWritten() {
-		this.imagePromise.resolve(await fs.readFile(await this.pagePath));
+		if (!this.id || !this.chapterDir || this.ignoreWritten)
+			return;
+		this.imagePromise.resolve(await fs.readFile(this.pagePath));
 		this.writePromise.resolve();
 	}
 
 	async initFromGet() {
-		let buffer = Buffer.from(await get(await this.endpoint, this, {responseType: 'arraybuffer'}, getQueuePages).promise);
+		if (!this.id || !this.chapterDir || !this.server || !this.hash)
+			return;
+		let buffer = Buffer.from(await get(this.endpoint, this, {responseType: 'arraybuffer'}, getQueuePages).promise);
 		this.imagePromise.resolve(buffer);
-		await write(await this.pagePath, buffer);
+		await write(this.pagePath, buffer);
 		this.writePromise.resolve();
 	}
 
@@ -221,15 +224,11 @@ class Page {
 	}
 
 	get endpoint() {
-		return this.server && this.hash && this.id ?
-			`${this.server}${this.hash}/${this.id}` :
-			Promise.reject('Failed to form page endpoint; missing page server, hash, or id.');
+		return `${this.server}${this.hash}/${this.id}`;
 	}
 
 	get pagePath() {
-		return this.id && this.chapterDir ?
-			path.resolve(this.chapterDir, this.id) :
-			Promise.reject('Failed to form page path; missing page id or chapter dir.');
+		return path.resolve(this.chapterDir, this.id);
 	}
 
 	get imageSrc() {
