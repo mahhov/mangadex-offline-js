@@ -71,7 +71,7 @@ customElements.define(name, class extends XElement {
 			manga.responseTask.promise,
 			...chapters.map(chapter => chapter.responseTask.promise),
 			...pages.map(page => page.imagePromise),
-		].filter(responseTask => responseTask?.promise?.done).length;
+		].filter(promise => promise.done).length;
 		this.pagesCount = chapters.length * pagesPerChapter;
 		this.pageWritesCount = pages.filter(page => page.writePromise.done).length;
 	}
@@ -80,16 +80,27 @@ customElements.define(name, class extends XElement {
 		// should only be invoked once
 		let manga = await mangaPromise;
 		this.updateProgress(manga);
-		manga.chaptersStream.on(chapters => {
-			this.updateProgress(manga);
-			chapters.forEach(chapter =>
-				chapter.pagesStream.on((_, cancel) => {
-					if (chapters === manga.chaptersStream.value)
-						this.updateProgress(manga);
-					else
-						cancel();
-				}),
-			);
-		});
+		manga.loadChaptersFromWrittenPromise.then(() => this.updateProgress(manga));
+		manga.loadChaptersFromGetPromise.then(() => this.updateProgress(manga));
+		let chaptersListened = [];
+		manga.chaptersStream.on(chapters =>
+			chapters
+				.filter(chapter =>
+					!chaptersListened.some(chapterListened => chapterListened === chapter))
+				.forEach(chapter => {
+					chaptersListened.push(chapter);
+					chapter.loadPagesFromWrittenPromise.then(() => this.updateProgress(manga));
+					chapter.loadPagesFromGetPromise.then(() => this.updateProgress(manga));
+					let pagesListened = [];
+					chapter.pagesStream.on(pages =>
+						pages
+							.filter(page =>
+								!pagesListened.some(pageListened => pageListened === page))
+							.forEach(page => {
+								pagesListened.push(page);
+								page.imagePromise.then(() => this.updateProgress(manga));
+								page.writePromise.then(() => this.updateProgress(manga));
+							}));
+				}));
 	}
 });

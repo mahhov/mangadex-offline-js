@@ -47,9 +47,8 @@ class Manga {
 		this.parentDir = parentDir;
 
 		this.chaptersStream = new Stream(undefined, []);
-
-		this.loadChaptersFromWritten();
-		this.loadChaptersFromGet();
+		this.loadChaptersFromWrittenPromise = this.loadChaptersFromWritten().catch(() => 0);
+		this.loadChaptersFromGetPromise = this.loadChaptersFromGet().catch(() => 0);
 	}
 
 	async loadChaptersFromWritten() {
@@ -149,9 +148,8 @@ class Chapter {
 		this.mangaDir = mangaDir;
 
 		this.pagesStream = new Stream(undefined, []);
-
-		this.loadPagesFromWritten();
-		this.loadPagesFromGet();
+		this.loadPagesFromWrittenPromise = this.loadPagesFromWritten().catch(() => 0);
+		this.loadPagesFromGetPromise = this.loadPagesFromGet().catch(() => 0);
 	}
 
 	async loadPagesFromWritten() {
@@ -209,7 +207,7 @@ class Chapter {
 
 	static parseTitle(title) {
 		let [volume, chapter, id] = title.split(' ');
-		return {volume, chapter, id};
+		return {volume, chapter, id: Number(id)};
 	}
 
 	get chapterDir() {
@@ -226,7 +224,6 @@ class Page {
 
 		this.imagePromise = new XPromise();
 		this.writePromise = new XPromise();
-
 		this.initFromWritten()
 			.catch(() => this.initFromGet())
 			.catch(() => {
