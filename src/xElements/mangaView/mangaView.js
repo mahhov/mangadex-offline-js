@@ -25,11 +25,12 @@ customElements.define(name, class extends XElement {
 		this.$('#chapter-selector').addEventListener('select', e =>
 			this.chapterIndex = e.detail);
 		this.$('#retry').addEventListener('click', async () => {
-			let manga = await this.mangaPromise;
-			if (!manga) return;
-			let chapter = (await (manga).chaptersPromise)[this.chapterIndex];
-			await chapter.retry();
-			this.chapterIndex = this.chapterIndex;
+			// todo
+			// let manga = await this.mangaPromise;
+			// if (!manga) return;
+			// let chapter = (await (manga).chaptersPromise)[this.chapterIndex];
+			// await chapter.retry();
+			// this.chapterIndex = this.chapterIndex;
 		});
 		this.$('#zoom').addEventListener('input', () => this.zoom = this.$('#zoom').value);
 		this.$('#next').addEventListener('click', () => {
@@ -46,38 +47,39 @@ customElements.define(name, class extends XElement {
 	set mangaPromise(valuePromise) {
 		this.classList.remove('loaded-chapters');
 		valuePromise.then(value => {
-			if (!value) return;
+			if (!value || valuePromise !== this.mangaPromise) return;
+			this.classList.add('loaded-chapters');
 			value.setHighPriority();
-			value.chaptersPromise.then(chapters => {
-				if (valuePromise !== this.mangaPromise) return;
-				this.classList.add('loaded-chapters');
-				this.$('#chapter-selector').options = chapters.map(chapter => chapter.chapterTitlePromise);
-				this.chapterIndex = 0;
+			value.chaptersStream.on((chapters, cancel) => {
+				if (valuePromise === this.mangaPromise)
+					this.$('#chapter-selector').options = chapters.map(chapter => chapter.title);
+				else
+					cancel();
 			});
+			this.chapterIndex = 0;
 		})
 	}
 
 	set chapter(value) {
 		if (!value) return; // can be undefined for mangas with 0 chapters
-		this.classList.remove('loaded-pages');
 		value.setHighPriority();
-		value.pagesPromise.then(pages => {
-			if (value !== this.chapter) return;
-			this.classList.add('loaded-pages');
-			this.clearChildren('#images-container');
-			pages.forEach(async page => {
-				let image = document.createElement('img');
-				this.$('#images-container').appendChild(image);
-				image.src = await page.imageSrc;
-			});
+		this.clearChildren('#images-container');
+		value.pagesStream.on((pages, cancel) => {
+			if (value === this.chapter)
+				pages.forEach(async page => {
+					let image = document.createElement('img');
+					this.$('#images-container').appendChild(image);
+					image.src = await page.imageSrc;
+				});
+			else
+				cancel();
 		});
 	}
 
 	set chapterIndex(value) {
-		this.mangaPromise.then(async manga =>
-			manga?.chaptersPromise?.then(chapters => {
-				if (value !== this.chapterIndex) return;
-				this.chapter = chapters[value];
-			}));
+		this.mangaPromise.then(async manga => {
+			if (value === this.chapterIndex && manga)
+				this.chapter = manga.chaptersStream.value[value];
+		});
 	}
 });

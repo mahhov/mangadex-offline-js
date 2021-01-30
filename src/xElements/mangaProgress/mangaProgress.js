@@ -1,6 +1,5 @@
 const {importUtil, XElement} = require('xx-element');
 const {template, name} = importUtil(__filename);
-const Average = require('../../services/Averager');
 
 customElements.define(name, class extends XElement {
 	static get attributeTypes() {
@@ -57,35 +56,40 @@ customElements.define(name, class extends XElement {
 		this.$('#progress-bar').secondary = this.pageWritesCount / this.pagesCount;
 	}
 
+	updateProgress(manga) {
+		let chapters = manga.chaptersStream.value;
+		let pages = chapters.flatMap(chapter => chapter.pagesStream.value);
+		let pagesPerChapter = chapters
+			.map(chapter => chapter.pagesStream.value.length)
+			.filter(pagesCount => pagesCount)
+			.reduce((a, b, i, array) => a + b / array.length, 0);
+
+		this.title = manga.title;
+		this.chaptersCount = chapters.length;
+		this.requestsCount = 1 + chapters.length * (pagesPerChapter + 1);
+		this.requestReadsCount = [
+			manga.responseTask.promise,
+			...chapters.map(chapter => chapter.responseTask.promise),
+			...pages.map(page => page.imagePromise),
+		].filter(responseTask => responseTask?.promise?.done).length;
+		this.pagesCount = chapters.length * pagesPerChapter;
+		this.pageWritesCount = pages.filter(page => page.writePromise.done).length;
+	}
+
 	async setMangaPromise(mangaPromise) {
 		// should only be invoked once
-		let manga = await mangaPromise
-
-		this.title = await manga.mangaTitlePromise;
-		this.chaptersCount = 0;
-		this.requestsCount = 0;
-		this.requestReadsCount = 0;
-		this.pagesCount = 0;
-		this.pageWritesCount = 0;
-		this.pagesPerChapter = new Average();
-
-		this.requestsCount = 1;
-		let chapters = await manga.chaptersPromise;
-		this.chaptersCount += chapters.length;
-		this.requestsCount = 1 + chapters.length;
-		this.requestReadsCount += 1;
-		chapters.forEach(async chapter => {
-			let pages = await chapter.pagesPromise;
-			this.pagesPerChapter.add(pages.length);
-			this.requestsCount = 1 + chapters.length * (this.pagesPerChapter.average + 1);
-			this.requestReadsCount += 1;
-			this.pagesCount = chapters.length * this.pagesPerChapter.average;
-			pages.forEach(async page => {
-				await page.dataPromise;
-				this.requestReadsCount += 1;
-				await page.writePromise;
-				this.pageWritesCount += 1;
-			});
+		let manga = await mangaPromise;
+		this.updateProgress(manga);
+		manga.chaptersStream.on(chapters => {
+			this.updateProgress(manga);
+			chapters.forEach(chapter =>
+				chapter.pagesStream.on((_, cancel) => {
+					if (chapters === manga.chaptersStream.value)
+						this.updateProgress(manga);
+					else
+						cancel();
+				}),
+			);
 		});
 	}
 });
