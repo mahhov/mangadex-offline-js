@@ -64,8 +64,7 @@ class RateLimitedRetryQueue {
 	}
 
 	async activate_() {
-		if (this.active)
-			return;
+		if (this.active) return;
 		this.active = true;
 		while (this.queue.length) {
 			let batch = this.queue.splice(0, this.batchSize);

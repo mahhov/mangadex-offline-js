@@ -53,19 +53,19 @@ class Manga {
 	}
 
 	async loadChaptersFromWritten() {
-		(await readDir(this.mangaDir, true)).forEach(chapterTitle =>
-			this.addChapter(Chapter.parseTitle(chapterTitle).id, chapterTitle));
+		this.addChapters((await readDir(this.mangaDir, true))
+			.map(chapterTitle => [Chapter.parseTitle(chapterTitle).id, chapterTitle]));
 	}
 
 	async loadChaptersFromGet() {
 		this.responseTask = get(this.endpoint, this);
 		let response = await this.responseTask.promise;
-		response.data.chapters
+		this.addChapters(response.data.chapters
 			.filter(chapterData => chapterData.language === this.language)
 			.reverse()
-			.forEach(chapterData =>
-				this.addChapter(chapterData.id, Chapter.title(chapterData.id, chapterData.volume, chapterData.chapter)));
-		await write(path.resolve(this.mangaDir, 'data.json'),
+			.map(chapterData =>
+				[chapterData.id, Chapter.title(chapterData.id, chapterData.volume, chapterData.chapter)]));
+		await write(path.resolve(this.mangaDir, 'data.json'), // todo replace with parseTitle
 			JSON.stringify({id: this.id, language: this.language}))
 	}
 
@@ -96,12 +96,13 @@ class Manga {
 		});
 	}
 
-	async addChapter(id, chapterTitle) {
-		if (!this.chaptersStream.value.some(chapter => chapter.id === id)) {
-			let chapter = new Chapter(id, chapterTitle, this.mangaDir);
-			this.chaptersStream.add([...this.chaptersStream.value, chapter]
+	addChapters(chapterIdTitleTuples) {
+		let newChapters = chapterIdTitleTuples
+			.filter(([id]) => !this.chaptersStream.value.some(chapter => chapter.id === id))
+			.map(([id, chapterTitle]) => new Chapter(id, chapterTitle, this.mangaDir));
+		if (newChapters.length)
+			this.chaptersStream.add([...this.chaptersStream.value, ...newChapters]
 				.sort((chapter1, chapter2) => sortNames(chapter1.title, chapter2.title)));
-		}
 	}
 
 	async removeWritten() {
@@ -132,7 +133,7 @@ class Manga {
 	}
 
 	static parseTitle(title) {
-		let [name, language, id] = title.split(' ');
+		let [_, name, language, id] = title.match(/(.*) ([^\s]*) ([^\s]*)/);
 		return [name, language, id];
 	}
 
@@ -154,27 +155,29 @@ class Chapter {
 	}
 
 	async loadPagesFromWritten() {
-		(await readDir(this.chapterDir)).forEach(pageId =>
-			this.addPage(pageId));
+		this.addPages((await readDir(this.chapterDir)).map(pageId => [pageId]));
 	}
 
 	async loadPagesFromGet() {
 		this.responseTask = get(this.endpoint, this);
 		let response = await this.responseTask.promise;
-		response.data.pages.forEach(pageId =>
-			this.addPage(pageId, Promise.resolve(response.data.server), Promise.resolve(response.data.hash)));
+		this.addPages(response.data.pages.map(pageId =>
+			[pageId, Promise.resolve(response.data.server), Promise.resolve(response.data.hash)]));
 	}
 
-	addPage(id, serverPromise = new XPromise(), hashPromise = new XPromise()) {
-		let duplicate = this.pagesStream.value.find(page => page.id === id);
-		if (duplicate) {
-			duplicate.serverPromise = Promise.any([duplicate.serverPromise, serverPromise]);
-			duplicate.hashPromise = Promise.any([duplicate.hashPromise, hashPromise]);
-		} else {
-			let page = new Page(id, this.chapterDir, serverPromise, hashPromise);
-			this.pagesStream.add([...this.pagesStream.value, page]
+	addPages(pageIdServerPromiseHashPromiseTuples) {
+		let newPages = pageIdServerPromiseHashPromiseTuples
+			.filter(([id, serverPromise = new XPromise(), hashPromise = new XPromise()]) => {
+				let duplicate = this.pagesStream.value.find(page => page.id === id);
+				if (!duplicate) return true;
+				duplicate.serverPromise = Promise.any([duplicate.serverPromise, serverPromise]);
+				duplicate.hashPromise = Promise.any([duplicate.hashPromise, hashPromise]);
+			})
+			.map((([id, serverPromise = new XPromise(), hashPromise = new XPromise()]) =>
+				new Page(id, this.chapterDir, serverPromise, hashPromise)));
+		if (newPages.length)
+			this.pagesStream.add([...this.pagesStream.value, ...newPages]
 				.sort((page1, page2) => sortNames(page1.id, page2.id)));
-		}
 	}
 
 	async retry() {
