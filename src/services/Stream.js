@@ -13,10 +13,12 @@ class Stream {
 	}
 
 	on(handler) {
-		let nextStream = new Stream(add =>
-			this.listeners.push(value => add(handler(value))));
+		let nextStream = new Stream();
+		let cancel = () => this.listeners = this.listeners.filter(l => l !== listener);
+		let listener = value => nextStream.add(handler(value, cancel));
+		this.listeners.push(listener);
 		if (this.hasValue)
-			nextStream.add(handler(this.value));
+			listener(this.value);
 		return nextStream;
 	}
 
