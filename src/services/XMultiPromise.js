@@ -34,7 +34,7 @@ class XMultiPromise {
 		this.resolved = false;
 		this.rejected = false;
 		this.done = false;
-		this.obj = null;
+		this.obj = undefined;
 
 		promise?.then(obj => this.resolve(obj));
 		promise?.catch(obj => this.reject(obj));

@@ -6,22 +6,23 @@ class XPromise {
 			reject = rej;
 		});
 
-		xPromise.resolvedObj = null;
 		xPromise.resolved = false;
-		xPromise.rejectedObj = null;
 		xPromise.rejected = false;
 		xPromise.done = false;
+		xPromise.obj = undefined;
 
 		xPromise.resolve = obj => {
+			if (xPromise.done) return;
 			xPromise.resolved = true;
-			xPromise.resolvedObj = obj;
+			xPromise.obj = obj;
 			xPromise.done = true;
 			resolve(obj);
 		};
 
 		xPromise.reject = obj => {
+			if (xPromise.done) return;
 			xPromise.rejected = true;
-			xPromise.rejectedObj = obj;
+			xPromise.obj = obj;
 			xPromise.done = true;
 			reject(obj);
 		};
