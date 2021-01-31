@@ -1,7 +1,8 @@
 class Stream {
-	constructor(initializer = undefined, initialValue = undefined) {
+	constructor(initializer = undefined, initialValue = undefined, cancel = undefined) {
 		this.hasValue = initialValue !== undefined;
 		this.value = initialValue;
+		this.cancel = cancel;
 		this.listeners = [];
 		initializer?.(this.add.bind(this));
 	}
@@ -13,8 +14,8 @@ class Stream {
 	}
 
 	on(handler) {
-		let nextStream = new Stream();
 		let cancel = () => this.listeners = this.listeners.filter(l => l !== listener);
+		let nextStream = new Stream(undefined, undefined, cancel);
 		let listener = value => nextStream.add(handler(value, cancel));
 		this.listeners.push(listener);
 		if (this.hasValue)

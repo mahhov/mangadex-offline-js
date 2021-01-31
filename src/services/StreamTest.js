@@ -103,6 +103,21 @@ dc.test([6, matchers.func], [5, matchers.func]);
 stream.add(0);
 dc.testOne(0, matchers.func);
 
+// cancel
+stream = new Stream();
+stream.on(dc.func);
+stream2 = stream.on(a => a + 10);
+stream2.on(dc.func);
+stream.add(5);
+dc.test([5, matchers.func], [15, matchers.func]);
+stream2.add(6);
+dc.testOne(6, matchers.func);
+stream2.cancel();
+stream.add(7);
+dc.testOne(7, matchers.func);
+stream2.add(8);
+dc.testOne(8, matchers.func);
+
 // inital values
 stream = new Stream(undefined, 10);
 stream.on(dc.func);
