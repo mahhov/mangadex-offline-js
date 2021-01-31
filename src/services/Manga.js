@@ -64,18 +64,16 @@ class Manga {
 			.reverse()
 			.map(chapterData =>
 				[chapterData.id, Chapter.title(chapterData.id, chapterData.volume, chapterData.chapter)]));
-		await write(path.resolve(this.mangaDir, 'data.json'), // todo replace with parseTitle
-			JSON.stringify({id: this.id, language: this.language}))
 	}
 
-	static async fromSampleMangaEndpoint(endpoint, parentDir) {
+	static fromSampleMangaEndpoint(endpoint, parentDir) {
 		let mangaId = endpoint.match(/manga\/(\d+)/i)?.[1];
 		return get(Manga.endpoint(mangaId)).promise
 			.then(response => Manga.fromChapterData(response.data.chapters[0], parentDir, 'gb'))
 			.catch(() => null);
 	}
 
-	static async fromSampleChapterEndpoint(endpoint, parentDir) {
+	static fromSampleChapterEndpoint(endpoint, parentDir) {
 		let chapterId = endpoint.match(/chapter\/(\d+)/i)?.[1];
 		return get(Chapter.endpoint(chapterId)).promise
 			.then(response => Manga.fromChapterData(response.data, parentDir))
@@ -89,10 +87,8 @@ class Manga {
 
 	static fromWritten(parentDir, title) {
 		let mangaDir = path.resolve(parentDir, title);
-		return fs.readFile(path.resolve(mangaDir, 'data.json')).then(file => {
-			let {id, language} = JSON.parse(file);
-			return new Manga(id, language, title, parentDir);
-		});
+		let {id, language} = Manga.parseTitle(title);
+		return new Manga(id, language, title, parentDir);
 	}
 
 	addChapters(chapterIdTitleTuples) {
@@ -133,7 +129,7 @@ class Manga {
 
 	static parseTitle(title) {
 		let [_, name, language, id] = title.match(/(.*) ([^\s]*) ([^\s]*)/);
-		return [name, language, id];
+		return {name, language, id};
 	}
 
 	get mangaDir() {

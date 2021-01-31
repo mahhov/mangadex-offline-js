@@ -23,9 +23,8 @@ customElements.define(name, class extends XElement {
 		this.$('#add-button').addEventListener('click', () =>
 			this.addInputtedManga());
 
-		(await Storage.writtenMangas).forEach(manga => manga
-			.then(manga => this.addMangaPromise(Promise.resolve(manga)))
-			.catch(() => 0));
+		(await Storage.writtenMangas).forEach(manga =>
+			this.addMangaPromise(Promise.resolve(manga)));
 	}
 
 	addInputtedManga() {
