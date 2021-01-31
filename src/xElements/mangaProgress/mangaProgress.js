@@ -41,19 +41,27 @@ customElements.define(name, class extends XElement {
 	}
 
 	set requestsCount(value) {
-		this.$('#progress-bar').primary = this.requestReadsCount / this.requestsCount;
+		this.$('#progress-bar').primary = this.primary;
 	}
 
 	set requestReadsCount(value) {
-		this.$('#progress-bar').primary = this.requestReadsCount / this.requestsCount;
+		this.$('#progress-bar').primary = this.primary;
 	}
 
 	set pagesCount(value) {
-		this.$('#progress-bar').secondary = this.pageWritesCount / this.pagesCount;
+		this.$('#progress-bar').secondary = this.secondary;
 	}
 
 	set pageWritesCount(value) {
-		this.$('#progress-bar').secondary = this.pageWritesCount / this.pagesCount;
+		this.$('#progress-bar').secondary = this.secondary;
+	}
+
+	get primary() {
+		return this.requestReadsCount / this.requestsCount;
+	}
+
+	get secondary() {
+		return Math.min(this.pageWritesCount / this.pagesCount, this.primary);
 	}
 
 	updateProgress(manga) {
