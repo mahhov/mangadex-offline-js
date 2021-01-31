@@ -44,42 +44,41 @@ customElements.define(name, class extends XElement {
 		this.$('#images-container').style.zoom = value;
 	}
 
-	set mangaPromise(valuePromise) {
+	set mangaPromise(mangaPromise) {
 		this.classList.remove('loaded-chapters');
-		valuePromise.then(value => {
-			if (!value || valuePromise !== this.mangaPromise) return;
+		this.chaptersListened?.cancel();
+		mangaPromise.then(manga => {
+			if (!manga || mangaPromise !== this.mangaPromise) return;
 			this.classList.add('loaded-chapters');
-			value.setHighPriority();
-			value.chaptersStream.on((chapters, cancel) => {
-				if (valuePromise === this.mangaPromise)
-					this.$('#chapter-selector').options = chapters.map(chapter => chapter.title);
-				else
-					cancel();
+			manga.setHighPriority();
+			this.chaptersListened = manga.chaptersStream.on(chapters => {
+				this.$('#chapter-selector').options = chapters.map(chapter => chapter.title);
+				if (!this.chapter)
+					this.chapterIndex = 0;
 			});
 			this.chapterIndex = 0;
-		})
+		});
 	}
 
-	set chapter(value) {
-		if (!value) return; // can be undefined for mangas with 0 chapters
-		value.setHighPriority();
+	set chapter(chapter) {
+		this.pagesListened?.cancel();
+		if (!chapter) return; // can be undefined for mangas with 0 chapters
+		chapter.setHighPriority();
 		this.clearChildren('#images-container');
-		value.pagesStream.on((pages, cancel) => {
-			if (value === this.chapter)
+		this.pagesListened = chapter.pagesStream.on(pages => {
+			if (chapter === this.chapter)
 				pages.forEach(async page => {
 					let image = document.createElement('img');
 					this.$('#images-container').appendChild(image);
 					image.src = await page.imageSrc;
 				});
-			else
-				cancel();
 		});
 	}
 
-	set chapterIndex(value) {
-		this.mangaPromise.then(async manga => {
-			if (value === this.chapterIndex && manga)
-				this.chapter = manga.chaptersStream.value[value];
+	set chapterIndex(chapterIndex) {
+		this.mangaPromise.then(manga => {
+			if (chapterIndex === this.chapterIndex && manga)
+				this.chapter = manga.chaptersStream.value[chapterIndex];
 		});
 	}
 });
