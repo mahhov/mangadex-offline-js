@@ -13,8 +13,6 @@ customElements.define(name, class extends XElement {
 	}
 
 	async connectedCallback() {
-		this.mangaPromises = [];
-
 		this.$('#add-input').addEventListener('keydown', ({key}) => {
 			if (key === 'Enter')
 				this.addInputtedManga();
@@ -40,8 +38,6 @@ customElements.define(name, class extends XElement {
 	}
 
 	async addMangaPromise(mangaPromise, tempTitle = '') {
-		this.mangaPromises.push(mangaPromise);
-
 		let mangaProgress = document.createElement('x-manga-progress');
 		mangaProgress.title = tempTitle;
 		mangaProgress.addEventListener('view', () => {
@@ -50,10 +46,8 @@ customElements.define(name, class extends XElement {
 				mangaProgressI.selected = mangaProgressI === mangaProgress)
 		});
 		mangaProgress.addEventListener('remove', async () => {
-			if (mangaProgress.selected)
-				this.$('#view').mangaPromise = this.mangaPromises[0];
-			await (await mangaPromise).removeWritten(Storage.dataDir);
 			mangaProgress.remove();
+			await (await mangaPromise).removeWritten(Storage.dataDir);
 		});
 		this.$('#list').appendChild(mangaProgress);
 		if (this.$('#list').children.length === 1)
