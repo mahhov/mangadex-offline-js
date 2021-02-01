@@ -104,7 +104,7 @@ class Manga {
 
 	async removeWritten() {
 		await this.abort();
-		await fs.rmdir(await this.mangaDirPromise, {recursive: true});
+		await fs.rmdir(this.mangaDir, {recursive: true});
 	}
 
 	setHighPriority() {
