@@ -187,6 +187,9 @@ class Chapter {
 
 	setHighPriority() {
 		this.responseTask.moveToFront();
+		this.pagesStream.on(pages =>
+			pages.forEach(page => page.setHighPriority()));
+		// todo should stop doing this once another chapter is set as high priority
 	}
 
 	async abort() {
@@ -251,6 +254,10 @@ class Page {
 		this.writePromise.resolve();
 	}
 
+	setHighPriority() {
+		this.responseTask?.moveToFront();
+	}
+
 	abort() {
 		this.aborted = true;
 	}
@@ -272,5 +279,3 @@ class Page {
 }
 
 module.exports = Manga;
-
-// high priority not working
