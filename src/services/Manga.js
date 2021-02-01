@@ -67,7 +67,8 @@ class Manga {
 	}
 
 	static fromSampleMangaEndpoint(endpoint, parentDir) {
-		let mangaId = endpoint.match(/manga\/(\d+)/i)?.[1];
+		let mangaId = endpoint.match(/(?:manga|title)\/(\d+)/i)?.[1];
+		if (!mangaId) return;
 		return get(Manga.endpoint(mangaId)).promise
 			.then(response => Manga.fromChapterData(response.data.chapters[0], parentDir, 'gb'))
 			.catch(() => null);
@@ -75,6 +76,7 @@ class Manga {
 
 	static fromSampleChapterEndpoint(endpoint, parentDir) {
 		let chapterId = endpoint.match(/chapter\/(\d+)/i)?.[1];
+		if (!chapterId) return;
 		return get(Chapter.endpoint(chapterId)).promise
 			.then(response => Manga.fromChapterData(response.data, parentDir))
 			.catch(() => null);
@@ -271,10 +273,5 @@ class Page {
 
 module.exports = Manga;
 
-// TODO
-// load offline first then bother with online
-// accept manga id urls
-// button to restart downloads
-// only bother for 1 chapter version per chapter (i.e. ignore multiple translations)
-// cache
-// error handling
+// high priority not working
+// write seems stuck

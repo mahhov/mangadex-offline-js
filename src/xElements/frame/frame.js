@@ -28,9 +28,15 @@ customElements.define(name, class extends XElement {
 	}
 
 	addInputtedManga() {
-		let chapterEndpoint = this.$('#add-input').value;
-		let mangaPromise = Manga.fromSampleChapterEndpoint(chapterEndpoint, Storage.dataDir);
-		this.addMangaPromise(mangaPromise, chapterEndpoint);
+		let endpoint = this.$('#add-input').value;
+
+		let mangaFromChapterEndpoint = Manga.fromSampleChapterEndpoint(endpoint, Storage.dataDir);
+		if (mangaFromChapterEndpoint)
+			this.addMangaPromise(Manga.fromSampleChapterEndpoint(endpoint, Storage.dataDir), endpoint);
+
+		let mangaFromSampleMangaEndpoint = Manga.fromSampleMangaEndpoint(endpoint, Storage.dataDir);
+		if (mangaFromSampleMangaEndpoint)
+			this.addMangaPromise(Manga.fromSampleMangaEndpoint(endpoint, Storage.dataDir), endpoint);
 	}
 
 	async addMangaPromise(mangaPromise, tempTitle = '') {
