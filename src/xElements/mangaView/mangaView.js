@@ -38,6 +38,15 @@ customElements.define(name, class extends XElement {
 		this.$('#images-container').style.zoom = value;
 	}
 
+	changeZoom(delta) {
+		let zoom = this.zoom + delta * Number(this.$('#zoom').step);
+		zoom = Math.round(zoom * 10) / 10;
+		this.zoom = Math.max(Math.min(
+			zoom,
+			Number(this.$('#zoom').max)),
+			Number(this.$('#zoom').min))
+	}
+
 	set mangaPromise(mangaPromise) {
 		this.chaptersListened?.cancel();
 		this.classList.remove('loaded-chapters');

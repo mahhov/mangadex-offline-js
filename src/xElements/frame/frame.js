@@ -23,6 +23,20 @@ customElements.define(name, class extends XElement {
 
 		(await Storage.writtenMangas).forEach(manga =>
 			this.addMangaPromise(Promise.resolve(manga)));
+
+		this.addEventListener('wheel', e => {
+			if (e.shiftKey) return;
+			e.preventDefault();
+			let down = e.deltaY > 0;
+			if (e.ctrlKey && down)
+				this.$('#view').changeZoom(-1);
+			else if (e.ctrlKey)
+				this.$('#view').changeZoom(1);
+			else if (down)
+				window.scrollBy(0, 300);
+			else
+				window.scrollBy(0, -300);
+		});
 	}
 
 	addInputtedManga() {
