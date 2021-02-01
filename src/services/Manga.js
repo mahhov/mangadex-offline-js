@@ -274,4 +274,3 @@ class Page {
 module.exports = Manga;
 
 // high priority not working
-// write seems stuck

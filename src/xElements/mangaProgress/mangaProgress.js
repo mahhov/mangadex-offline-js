@@ -43,10 +43,12 @@ customElements.define(name, class extends XElement {
 
 	set requestsCount(value) {
 		this.$('#progress-bar').primary = this.primary;
+		this.$('#progress-bar').secondary = this.secondary;
 	}
 
 	set requestReadsCount(value) {
 		this.$('#progress-bar').primary = this.primary;
+		this.$('#progress-bar').secondary = this.secondary;
 	}
 
 	set pagesCount(value) {
