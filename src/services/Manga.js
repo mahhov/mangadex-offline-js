@@ -153,7 +153,7 @@ class Chapter {
 	}
 
 	async loadPagesFromGet() {
-		this.responseTask = get(this.endpoint, this);
+		this.responseTask = get(this.endpoint, this, undefined, undefined, this.retryMode);
 		let response = await this.responseTask.promise;
 		this.addPages(response.data.pages.map(pageId =>
 			[pageId, Promise.resolve(response.data.server), Promise.resolve(response.data.hash)]));
@@ -168,15 +168,19 @@ class Chapter {
 				duplicate.hashPromise = Promise.any([duplicate.hashPromise, hashPromise]);
 			})
 			.map((([id, serverPromise = new XPromise(), hashPromise = new XPromise()]) =>
-				new Page(id, this.chapterDir, serverPromise, hashPromise)));
+				new Page(id, this.chapterDir, serverPromise, hashPromise, this.retryMode)));
 		if (newPages.length)
 			this.pagesStream.add([...this.pagesStream.value, ...newPages]
 				.sort((page1, page2) => sortNames(page1.id, page2.id)));
 	}
 
 	async retry() {
-		this.setHighPriority();
-		(await this.pagesStream.promise).forEach(page => page.retry());
+		this.retryMode = true;
+		this.pagesStream.add([]);
+		if (this.responseTask?.done)
+			this.loadPagesFromGet().catch(() => 0);
+		else
+			this.setHighPriority();
 	}
 
 	setHighPriority() {
@@ -212,7 +216,7 @@ class Chapter {
 }
 
 class Page {
-	constructor(id, chapterDir, serverPromise, hashPromise) {
+	constructor(id, chapterDir, serverPromise, hashPromise, forceGet = false) {
 		this.id = id;
 		this.chapterDir = chapterDir;
 		this.serverPromise = serverPromise;
@@ -220,8 +224,11 @@ class Page {
 
 		this.imagePromise = new XPromise();
 		this.writePromise = new XPromise();
-		this.initFromWritten()
-			.catch(() => this.initFromGet())
+		(forceGet ?
+				this.initFromGet(true) :
+				this.initFromWritten()
+					.catch(() => this.initFromGet())
+		)
 			.catch(() => {
 				this.imagePromise.resolve();
 				this.writePromise.resolve();
@@ -233,17 +240,13 @@ class Page {
 		this.writePromise.resolve();
 	}
 
-	async initFromGet() {
-		this.responseTask = get(await this.endpoint, this, {responseType: 'arraybuffer'}, getQueuePages);
+	async initFromGet(highPriority = false) {
+		this.responseTask = get(await this.endpoint, this, {responseType: 'arraybuffer'}, getQueuePages, highPriority);
 		let response = await this.responseTask.promise;
 		let buffer = Buffer.from(response);
 		this.imagePromise.resolve(buffer);
 		await write(this.pagePath, buffer);
 		this.writePromise.resolve();
-	}
-
-	retry() {
-		// todo
 	}
 
 	abort() {

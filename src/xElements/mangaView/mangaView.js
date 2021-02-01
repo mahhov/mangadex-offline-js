@@ -24,14 +24,8 @@ customElements.define(name, class extends XElement {
 
 		this.$('#chapter-selector').addEventListener('select', e =>
 			this.chapterIndex = e.detail);
-		this.$('#retry').addEventListener('click', async () => {
-			// todo
-			// let manga = await this.mangaPromise;
-			// if (!manga) return;
-			// let chapter = (await (manga).chaptersPromise)[this.chapterIndex];
-			// await chapter.retry();
-			// this.chapterIndex = this.chapterIndex;
-		});
+		this.$('#retry').addEventListener('click', async () =>
+			this.chapter?.retry());
 		this.$('#zoom').addEventListener('input', () => this.zoom = this.$('#zoom').value);
 		this.$('#next').addEventListener('click', () => {
 			this.$('#chapter-selector').selectedIndex = ++this.chapterIndex;
@@ -66,6 +60,7 @@ customElements.define(name, class extends XElement {
 		chapter.setHighPriority();
 		this.clearChildren('#images-container');
 		this.pagesListened = chapter.pagesStream.on(pages => {
+			this.clearChildren('#images-container');
 			if (chapter === this.chapter)
 				pages.forEach(async page => {
 					let image = document.createElement('img');
