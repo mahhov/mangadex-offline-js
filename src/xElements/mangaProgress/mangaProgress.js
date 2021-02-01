@@ -1,5 +1,6 @@
 const {importUtil, XElement} = require('xx-element');
 const {template, name} = importUtil(__filename);
+const Debounce = require('../../services/Debounce');
 
 customElements.define(name, class extends XElement {
 	static get attributeTypes() {
@@ -87,9 +88,12 @@ customElements.define(name, class extends XElement {
 	async setMangaPromise(mangaPromise) {
 		// should only be invoked once
 		let manga = await mangaPromise;
-		this.updateProgress(manga);
-		manga.loadChaptersFromWrittenPromise.then(() => this.updateProgress(manga));
-		manga.loadChaptersFromGetPromise.then(() => this.updateProgress(manga));
+
+		let debouncedUpdateProgress = new Debounce(() => this.updateProgress(manga), 500);
+
+		debouncedUpdateProgress();
+		manga.loadChaptersFromWrittenPromise.then(debouncedUpdateProgress);
+		manga.loadChaptersFromGetPromise.then(debouncedUpdateProgress);
 		let chaptersListened = [];
 		manga.chaptersStream.on(chapters =>
 			chapters
@@ -97,8 +101,8 @@ customElements.define(name, class extends XElement {
 					!chaptersListened.some(chapterListened => chapterListened === chapter))
 				.forEach(chapter => {
 					chaptersListened.push(chapter);
-					chapter.loadPagesFromWrittenPromise.then(() => this.updateProgress(manga));
-					chapter.loadPagesFromGetPromise.then(() => this.updateProgress(manga));
+					chapter.loadPagesFromWrittenPromise.then(debouncedUpdateProgress);
+					chapter.loadPagesFromGetPromise.then(debouncedUpdateProgress);
 					let pagesListened = [];
 					chapter.pagesStream.on(pages =>
 						pages
@@ -106,8 +110,8 @@ customElements.define(name, class extends XElement {
 								!pagesListened.some(pageListened => pageListened === page))
 							.forEach(page => {
 								pagesListened.push(page);
-								page.imagePromise.then(() => this.updateProgress(manga));
-								page.writePromise.then(() => this.updateProgress(manga));
+								page.imagePromise.then(debouncedUpdateProgress);
+								page.writePromise.then(debouncedUpdateProgress);
 							}));
 				}));
 	}
