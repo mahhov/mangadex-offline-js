@@ -13,9 +13,12 @@
   "license": "ISC",
   "dependencies": {
     "axios": "^0.21.1",
-    "electron": "^11.2.1",
     "env-paths": "^2.2.0",
     "xx-element": "^3.0.1"
+  },
+  "devDependencies": {
+    "electron": "^11.2.1",
+    "electron-builder": "^22.9.1"
   },
   "build": {
     "asar": false,
@@ -24,7 +27,7 @@
       "resources",
       "src"
     ],
-    "icon": "./resources/headphones-alt-solid-512.png",
+    "icon": "./resources/fa-book-open.png",
     "linux": {
       "target": "AppImage"
     }
