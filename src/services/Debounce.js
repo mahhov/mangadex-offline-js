@@ -6,8 +6,8 @@ class Debounce {
 		return async (...params) => {
 			if (pending) return;
 			pending = true;
-			handler(...params);
 			await sleep(delay);
+			handler(...params);
 			pending = false;
 		}
 	}
