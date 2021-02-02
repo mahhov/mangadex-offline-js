@@ -54,7 +54,7 @@ customElements.define(name, class extends XElement {
 			manga.setHighPriority();
 			this.classList.add('loaded-chapters');
 			this.chaptersListened = manga.chaptersStream.on(chapters => {
-				this.$('#chapter-selector').options = chapters.map(chapter => chapter.title);
+				this.$('#chapter-selector').options = chapters.map(chapter => chapter.shortTitle);
 				if (!this.chapter)
 					this.chapterIndex = 0;
 			});

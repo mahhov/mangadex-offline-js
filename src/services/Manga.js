@@ -205,6 +205,11 @@ class Chapter {
 		return `https://mangadex.org/api/v2/chapter/${id}`;
 	}
 
+	get shortTitle() {
+		let {volume, chapter} = Chapter.parseTitle(this.title);
+		return `${volume} ${chapter}`;
+	}
+
 	static title(id = '_', volume = '_', chapter = '_') {
 		return `${volume} ${chapter} ${id}`;
 	}
