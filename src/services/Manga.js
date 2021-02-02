@@ -5,15 +5,15 @@ const RateLimitedRetryQueue = require('./RateLimitedRetryQueue');
 const XPromise = require('./XPromise');
 const Stream = require('./Stream');
 
-let getQueueChapters = new RateLimitedRetryQueue(10, undefined, 10);
-let getQueuePages = new RateLimitedRetryQueue(10, undefined, 10);
+let getQueueChapters = new RateLimitedRetryQueue(10, undefined, 10, true);
+let getQueuePages = new RateLimitedRetryQueue(10, undefined, 10, true);
 let get = (endpoint, abortObj = {}, options = undefined, queue = getQueueChapters, highPriority = false) => {
 	let handler = () =>
 		abortObj.aborted ?
 			Promise.resolve(null) :
 			axios.get(endpoint, options).then(response =>
 				abortObj.aborted ? null : response.data);
-	return highPriority ? queue.addFront(handler) : queue.add(handler);
+	return queue.add(handler, highPriority);
 };
 
 let sortNames = (name1 = '', name2 = '') => {
@@ -68,7 +68,7 @@ class Manga {
 	static fromSampleMangaEndpoint(endpoint, parentDir) {
 		let mangaId = endpoint.match(/(?:manga|title)\/(\d+)/i)?.[1];
 		if (!mangaId) return;
-		return get(Manga.endpoint(mangaId)).promise
+		return get(Manga.endpoint(mangaId), undefined, undefined, undefined, true).promise
 			.then(response => Manga.fromChapterData(response.data.chapters[0], parentDir, 'gb'))
 			.catch(() => null);
 	}
@@ -76,7 +76,7 @@ class Manga {
 	static fromSampleChapterEndpoint(endpoint, parentDir) {
 		let chapterId = endpoint.match(/chapter\/(\d+)/i)?.[1];
 		if (!chapterId) return;
-		return get(Chapter.endpoint(chapterId)).promise
+		return get(Chapter.endpoint(chapterId), undefined, undefined, undefined, true).promise
 			.then(response => Manga.fromChapterData(response.data, parentDir))
 			.catch(() => null);
 	}
@@ -230,11 +230,12 @@ class Page {
 		this.chapterDir = chapterDir;
 		this.serverPromise = serverPromise;
 		this.hashPromise = hashPromise;
+		this.highPriority = forceGet;
 
 		this.imagePromise = new XPromise();
 		this.writePromise = new XPromise();
 		(forceGet ?
-				this.initFromGet(true) :
+				this.initFromGet() :
 				this.initFromWritten()
 					.catch(() => this.initFromGet())
 		)
@@ -249,8 +250,8 @@ class Page {
 		this.writePromise.resolve();
 	}
 
-	async initFromGet(highPriority = false) {
-		this.responseTask = get(await this.endpoint, this, {responseType: 'arraybuffer'}, getQueuePages, highPriority);
+	async initFromGet() {
+		this.responseTask = get(await this.endpoint, this, {responseType: 'arraybuffer'}, getQueuePages, this.highPriority);
 		let response = await this.responseTask.promise;
 		let buffer = Buffer.from(response);
 		this.imagePromise.resolve(buffer);
@@ -259,6 +260,7 @@ class Page {
 	}
 
 	setHighPriority() {
+		this.highPriority = true;
 		this.responseTask?.setHighPriority();
 	}
 
