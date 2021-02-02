@@ -42,6 +42,10 @@ input[type=range]:focus {
 	height: 12px;
 }
 
+::-webkit-scrollbar-corner {
+	background: black;
+}
+
 input {
 	padding: 3px;
 }
