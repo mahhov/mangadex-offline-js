@@ -1,6 +1,6 @@
 ## Mangadex Offline JS
 
-This is a lightweight JS app to download mangas from mangadex for offline reading.
+A lightweight JS app to download mangas from https://mangadex.org/ for offline reading.
 
 ![screenshot.png](./screenshots/screenshot.png)
 
