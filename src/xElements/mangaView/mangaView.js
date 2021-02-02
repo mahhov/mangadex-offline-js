@@ -1,7 +1,5 @@
 const {importUtil, XElement} = require('xx-element');
 const {template, name} = importUtil(__filename);
-const path = require('path');
-const Storage = require('../../services/Storage');
 const Manga = require('../../services/Manga');
 
 customElements.define(name, class extends XElement {

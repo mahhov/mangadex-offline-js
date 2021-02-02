@@ -3,7 +3,6 @@ const path = require('path');
 const axios = require('axios');
 const RateLimitedRetryQueue = require('./RateLimitedRetryQueue');
 const XPromise = require('./XPromise');
-const XMultiPromise = require('./XMultiPromise');
 const Stream = require('./Stream');
 
 let getQueueChapters = new RateLimitedRetryQueue(10, undefined, 10);
