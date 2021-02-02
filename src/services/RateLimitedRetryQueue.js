@@ -3,22 +3,20 @@ const XPromise = require('./XPromise');
 let sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 class Task {
-	constructor(handler, parentQueue) {
+	constructor(handler, parentQueue, highPriority = false) {
 		this.handler = handler;
 		this.parentQueue = parentQueue;
+		this.highPriority = highPriority;
 		this.aborted = false; // todo
 		this.promise = new XPromise();
 	}
 
-	abort() {
-		this.aborted = true;
+	setHighPriority() {
+		this.highPriority = true;
 	}
 
-	moveToFront() {
-		let i = this.parentQueue.indexOf(this);
-		if (i === -1) return; // Occurs when the task has already been completed
-		this.parentQueue.splice(i, 1);
-		this.parentQueue.unshift(this);
+	abort() {
+		this.aborted = true;
 	}
 }
 
@@ -29,20 +27,12 @@ class RateLimitedRetryQueue {
 		this.batchSize = batchSize;
 		this.lastTime = Date.now();
 		this.queue = [];
-		this.batch = [];
 		this.active = false;
 	}
 
-	add(handler) {
-		let task = new Task(handler, this.queue);
+	add(handler, highPriority = false) {
+		let task = new Task(handler, this.queue, highPriority);
 		this.queue.push(task);
-		this.activate_();
-		return task;
-	}
-
-	addFront(handler) {
-		let task = new Task(handler, this.queue);
-		this.queue.unshift(task);
 		this.activate_();
 		return task;
 	}
@@ -67,7 +57,9 @@ class RateLimitedRetryQueue {
 		if (this.active) return;
 		this.active = true;
 		while (this.queue.length) {
-			let batch = this.queue.splice(0, this.batchSize);
+			let batch = this.queue
+				.sort((a, b) => b.highPriority - a.highPriority)
+				.splice(0, this.batchSize);
 			await Promise.all(batch.map(task => this.next_(task)));
 			await sleep(this.delay - Date.now() + this.lastTime);
 		}

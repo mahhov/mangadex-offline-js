@@ -107,7 +107,7 @@ class Manga {
 	}
 
 	setHighPriority() {
-		this.responseTask.moveToFront();
+		this.responseTask.setHighPriority();
 	}
 
 	async abort() {
@@ -185,7 +185,7 @@ class Chapter {
 	}
 
 	setHighPriority() {
-		this.responseTask.moveToFront();
+		this.responseTask.setHighPriority();
 		this.pagesStream.on(pages =>
 			pages.forEach(page => page.setHighPriority()));
 		// todo should stop doing this once another chapter is set as high priority
@@ -259,7 +259,7 @@ class Page {
 	}
 
 	setHighPriority() {
-		this.responseTask?.moveToFront();
+		this.responseTask?.setHighPriority();
 	}
 
 	abort() {
