@@ -2,15 +2,31 @@
   "name": "mangadex-offline",
   "version": "1.0.0",
   "description": "electron app to download and read mangadex mangas offline",
+  "keywords": [
+    "electron",
+    "offline",
+    "manga",
+    "mangadex",
+    "download",
+    "read"
+  ],
   "main": "src/electronStarter.js",
   "scripts": {
     "start": "electron .",
     "build-dev": "electron-builder . -c.compression=store",
-    "clean-build": "rm -rf dist; electron-builder .",
-    "ship": "git push && build --win -p always"
+    "clean-build": "rm -rf dist; electron-builder -w",
+    "ship": "git push && electron-builder -w -p always"
   },
   "author": "mahhov1",
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mahhov/mangadex-offline-js.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mahhov/mangadex-offline-js/issues"
+  },
+  "homepage": "https://github.com/mahhov/mangadex-offline-js#readme",
   "dependencies": {
     "axios": "^0.21.1",
     "env-paths": "^2.2.0",
@@ -27,9 +43,6 @@
       "resources",
       "src"
     ],
-    "icon": "./resources/fa-book-open.png",
-    "linux": {
-      "target": "AppImage"
-    }
+    "icon": "./resources/fa-book-open.png"
   }
 }
