@@ -71,6 +71,7 @@ customElements.define(name, class extends XElement {
 			this.clearChildren('#images-container');
 			pages.forEach(async page => {
 				let image = document.createElement('img');
+				image.loading = 'lazy';
 				this.$('#images-container').appendChild(image);
 				image.src = await page.imageSrc;
 			});
