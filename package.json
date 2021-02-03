@@ -13,7 +13,7 @@
   "main": "src/electronStarter.js",
   "scripts": {
     "start": "electron .",
-    "build-dev": "electron-builder . -c.compression=store",
+    "build-dev": "electron-builder -w -c.compression=store",
     "clean-build": "rm -rf dist; electron-builder -w",
     "ship": "git push && electron-builder -w -p always"
   },
@@ -43,6 +43,6 @@
       "resources",
       "src"
     ],
-    "icon": "./resources/fa-book-open.png"
+    "icon": "./resources/book-open-solid.png"
   }
 }
