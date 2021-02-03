@@ -1,6 +1,6 @@
 {
   "name": "mangadex-offline",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "electron app to download and read mangadex mangas offline",
   "keywords": [
     "electron",
