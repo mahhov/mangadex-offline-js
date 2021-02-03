@@ -2,3 +2,4 @@
 node_modules
 mangadex-offline.iml
 dist
+.iml
