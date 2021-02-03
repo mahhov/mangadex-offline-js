@@ -178,7 +178,7 @@ class Chapter {
 	async retry() {
 		this.retryMode = true;
 		this.pagesStream.add([]);
-		if (this.responseTask?.done)
+		if (this.responseTask.promise.done)
 			this.loadPagesFromGet().catch(() => 0);
 		else
 			this.setHighPriority();
