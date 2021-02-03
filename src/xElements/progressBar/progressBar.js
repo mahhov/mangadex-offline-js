@@ -24,7 +24,8 @@ customElements.define(name, class extends XElement {
 	}
 
 	set secondary(value) {
-		this.$('#fill-secondary').style.width = round(value) * 100 + '%';
+		value = round(value);
+		this.$('#fill-secondary').style.width = value * 100 + '%';
 		this.classList.toggle('done', value >= 1);
 	}
 });
