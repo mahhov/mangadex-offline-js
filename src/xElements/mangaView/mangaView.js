@@ -80,7 +80,7 @@ customElements.define(name, class extends XElement {
 
 	set chapterIndex(chapterIndex) {
 		this.mangaPromise.then(manga => {
-			if (chapterIndex === this.chapterIndex && manga)
+			if (chapterIndex === this.chapterIndex && manga && chapterIndex < manga.chaptersStream.value.length)
 				this.chapter = manga.chaptersStream.value[chapterIndex];
 		});
 	}
